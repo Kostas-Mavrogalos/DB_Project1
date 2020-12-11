@@ -18,14 +18,20 @@ int HP_CreateFile(	char *filename,
 			int attrLength	// size of key-field
 		 )
 {
-	BF_CreateFile(filename)
+	int fileDesc;
+	BF_CreateFile(filename);
+	
+ 	BF_OpenFile(filename);
+ 	fileDesc = BF_AllocateBlock(filename);
+ 	BF_WriteBlock(fileDesc, 0);
+	
 }
 
 /* Open file named "filename" and reads the info relevant to heap file from first block */
 /* In case of an error, returns NULL */
 HP_Info* HP_OpenFile(	char *filename)
 {
-
+	
 }
 
 /* Close file given by said structure */
