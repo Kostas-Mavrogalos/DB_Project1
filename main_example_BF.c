@@ -6,7 +6,7 @@
 
 #define FILENAME "file"
 #define MAX_FILES 100
-#define MAX_BLOCKS 500
+#define MAX_BLOCKS 5
 
 int main(int argc, char** argv) {
 	int bfs [MAX_FILES];
@@ -49,7 +49,6 @@ int main(int argc, char** argv) {
 			}
 		}
 		filename[0]++;
-
 		if (BF_CloseFile(bfs[i]) < 0) {
 			BF_PrintError("Error closing file");
 			break;
