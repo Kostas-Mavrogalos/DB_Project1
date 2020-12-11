@@ -1,7 +1,6 @@
 #include "BF.a"
 #include "Record.h"
 
-
 /* Use to store needed information for heap file when HP_OpenFile() is used*/
 typedef struct{
 	int fileDesc;	// id returned by BF_OpenFile() to identify said file
@@ -28,7 +27,21 @@ HP_Info* HP_OpenFile(	char *filename);
 /* When successfully closed file -> deallocate memory used up by the structure*/
 int HP_CloseFile(	HP_info *header_info);
 
+/* Inserts record into a block of the file identified by HP_info */
+/* Returns: blockId in which record was inserted upon success, -1 upon failure*/
 int HP_InsertEntry(	HP_info header_info,
-			Record record;
+			Record record;	// structure in Record.h representing a record that gets stored
 
+);
+
+/* Deletes record with primary key 'value' */
+/* Returns: 0 upon success, -1 upon failure */
+int HP_DeleteEntry(	HP_info header_info,
+			void *value // primary key value
+);
+
+/* Find and print all entries with primary key 'value' */
+/* Returns: number of blocks read upon success, -1 upon failure*/
+int HP_GetAllEntries(	HP_info header_info,
+			void *value // primary key value
 );
