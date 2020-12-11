@@ -1,5 +1,8 @@
 #include "HP.h"
 #include "Record.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 // /* Use to store needed information for heap file when HP_OpenFile() is used*/
 // typedef struct{
@@ -19,12 +22,28 @@ int HP_CreateFile(	char *filename,
 		 )
 {
 	int fileDesc;
+	void *block;
+	if (attrType != 'i' && attrType != 'c'){
+		printf("Error illegal character.\n");
+		return -1;
+	}
+									// ADD ERROR CHECKS!!!
 	BF_CreateFile(filename);
 	
  	BF_OpenFile(filename);
  	fileDesc = BF_AllocateBlock(filename);
- 	BF_WriteBlock(fileDesc, 0);
+ 	BF_ReadBlock(fileDesc, 0, &block);
+	memcpy(block, &fileDesc, sizeof(int));
+	block += sizeof(int);
+
+	memcpy(block, &attrType, sizeof(char));
+	block += sizeof(char);
 	
+	memcpy(block, &attrType, strlen(attrName)+1)
+	block += strlen(attrName);
+	
+	memcpy(block, attrLength);
+	BF_CloseFile(fileDesc);
 }
 
 /* Open file named "filename" and reads the info relevant to heap file from first block */
