@@ -56,6 +56,8 @@ int HP_CreateFile(char *filename, char attrType, char *attrName, int attrLength)
 
 	memcpy(block, &attrLength, sizeof(int));
 
+																							//BF_Write(fileDesc, )
+
 	if (BF_CloseFile(fileDesc)< 0 ) {
 		BF_PrintError("Couldn't close file");
 		return -1;
@@ -102,7 +104,14 @@ HP_info* HP_OpenFile(char *filename)
 /* When successfully closed file -> deallocate memory used up by the structure*/
 int HP_CloseFile(HP_info *header_info)
 {
-	//j
+	if (BF_CloseFile(header_info->fileDesc) < 0) {
+		BF_PrintError("Couldn't close file")l
+		return -1;
+	}
+
+	free(header_info);
+
+	return 0;
 }
 
 /* Inserts record into a block of the file identified by HP_info */
@@ -110,13 +119,20 @@ int HP_CloseFile(HP_info *header_info)
 int HP_InsertEntry(	HP_info header_info, Record record)
 {
 
+	int block_counter;
+	void* block;
+	block_counter = BF_GetBlockCounter(header_info->fileDesc) - 1;
+
+	BF_ReadBlock(header_info->fileDesc, block_counter, &block);
+
+
+// PARE TO BLOCK ID APO TO fileDesc, PIGAINE STi TELEUTAIA DIA8ESIMI 8ESI KAI BALE TO RECORD
+	memc()
 }
 
 /* Deletes record with primary key 'value' */
 /* Returns: 0 upon success, -1 upon failure */
-int HP_DeleteEntry(	HP_info header_info,
-			void *value // primary key value
-		  )
+int HP_DeleteEntry(	HP_info header_info, void *value)
 {
 
 }
