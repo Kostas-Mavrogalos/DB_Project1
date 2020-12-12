@@ -1,11 +1,11 @@
-#include "BF.a"
 #include "Record.h"
+#pragma once
 
 /* Use to store needed information for heap file when HP_OpenFile() is used*/
 typedef struct{
 	int fileDesc;	// id returned by BF_OpenFile() to identify said file
 	char attrType;	// type that describes key-field ('c'or 'i')
-	char* attrName;	// name of field that is key
+	char attrName[20];	// name of field that is key
 	int attrLength;	// size of key-field
 }HP_info;
 
@@ -20,7 +20,7 @@ int HP_CreateFile(	char *filename,
 
 /* Open file named "filename" and reads the info relevant to heap file from first block */
 /* In case of an error, returns NULL */
-HP_Info* HP_OpenFile(	char *filename);
+HP_info* HP_OpenFile(	char *filename);
 
 /* Close file given by said structure */
 /* Returns: 0 for success, -1 for failure*/
