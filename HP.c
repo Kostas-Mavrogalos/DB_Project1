@@ -119,12 +119,12 @@ int HP_CloseFile(HP_info *header_info)
 int HP_InsertEntry(	HP_info header_info, Record record)
 {
 
-	int block_counter;
+	int block_number;
 	void* block;
-	block_counter = BF_GetBlockCounter(header_info->fileDesc) - 1;
+	block_number = BF_GetBlockCounter(header_info->fileDesc) - 1;
 
-	BF_ReadBlock(header_info->fileDesc, block_counter, &block);
-
+	BF_ReadBlock(header_info->fileDesc, block_number, &block);
+	
 
 // PARE TO BLOCK ID APO TO fileDesc, PIGAINE STi TELEUTAIA DIA8ESIMI 8ESI KAI BALE TO RECORD
 	memc()
