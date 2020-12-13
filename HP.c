@@ -30,21 +30,26 @@ int HP_CreateFile(char *filename, char attrType, char *attrName, int attrLength)
 	  return -1;
 	}
 
-  if ( (fileDesc = BF_OpenFile(filename)) < 0 ) {
+  	if ( (fileDesc = BF_OpenFile(filename)) < 0 ) {
 		BF_PrintError("Couldn't open file");
 		return -1;
 	}
 
  	if (BF_AllocateBlock(fileDesc) < 0 ) {
-		BF_PrintError("Couldn't allocate file");
+		BF_PrintError("Couldn't allocate block");
 		return -1;
 	}
 
  	if (BF_ReadBlock(fileDesc, 0, &block) < 0 ) {
-		BF_PrintError("Couldn't read file");
+		BF_PrintError("Couldn't read block");
 		return -1;
 	}
 
+	if (BF_WriteBlock(fileDesc, 0) < 0){
+		BF_PrintError("Couldnt' write block");
+		return -1;
+	}
+	
 	memcpy(block, &fileDesc, sizeof(int));
 	block += sizeof(int);
 
@@ -116,18 +121,84 @@ int HP_CloseFile(HP_info *header_info)
 
 /* Inserts record into a block of the file identified by HP_info */
 /* Returns: blockId in which record was inserted upon success, -1 upon failure*/
-int HP_InsertEntry(	HP_info header_info, Record record)
+int HP_InsertEntry(HP_info header_info, Record record)
 {
 
 	int block_number;
-	void* block;
-	block_number = BF_GetBlockCounter(header_info->fileDesc) - 1;
-
-	BF_ReadBlock(header_info->fileDesc, block_number, &block);
+	int num_of_records;
+	void *block;
+	void *num_records_p;
+	void *next_block_p;
+	Record *first_available;
 	
-
-// PARE TO BLOCK ID APO TO fileDesc, PIGAINE STi TELEUTAIA DIA8ESIMI 8ESI KAI BALE TO RECORD
-	memc()
+	// block_number is the index of the last block, where the insertion is attempted.
+	block_number = BF_GetBlockCounter(header_info->fileDesc) - 1;
+	
+	if (BF_ReadBlock(header_info->fileDesc, block_number, &block) < 0){
+		BF_PrintError("Couldn't read block");
+		return -1;
+	}
+	
+	// If the current last block is 0, allocate a new one. Never insert a record in the first block.
+	if(block_number-1 == 0){
+		if (BF_AllocateBlock(fileDesc) < 0 ) {
+			BF_PrintError("Couldn't allocate block");
+			return -1;
+		}
+		if (BF_ReadBlock(fileDesc, block_number, &block) < 0 ) {
+			BF_PrintError("Couldn't read block");
+			return -1;
+		}
+		
+		if (BF_WriteBlock(fileDesc, block_number) < 0 ) {
+			BF_PrintError("Couldnt' write block");
+			return -1;
+		}
+		
+		memcpy(BLOCK_SIZE - 1 - sizeof(int*), block, sizeof(int*));
+	}
+	
+	// Go to the last 8 bytes and store the number of records
+	num_records_p = block + ((BLOCK_SIZE -1) - sizeof(int) + 1);
+	memcpy(&num_of_records, num_records_p, sizeof(int));
+	// Right before the bytes storing num_of_record resides the pointer to the next block.
+	next_block_p = num_records_p - sizeof(int*);
+	
+	// Move the pointer for insertion sizeof(Record*) times the records inserted.
+	first_available = (Record *)(block + (num_of_records+1)*sizeof(Record*));
+	
+	// If there is enough space in this block, store the record.
+	if (next_block_p - (void *)first_available >= sizeof(Record*)) {
+		memcpy(first_available, &record, sizeof(Record*));
+		num_of_records ++;
+		memcpy(num_records_p, &num_of_records, sizeof(int));
+		return block_number;
+	}
+	
+	// If the block is full, allocate memory for a new one and insert the record at the beginning.
+	block_number ++;
+	if (BF_AllocateBlock(fileDesc) < 0 ) {
+		BF_PrintError("Couldn't allocate block");
+		return -1;
+	}
+	if (BF_ReadBlock(fileDesc, block_number, &block) < 0 ) {
+		BF_PrintError("Couldn't read block");
+		return -1;
+	}
+		
+	if (BF_WriteBlock(fileDesc, block_number) < 0 ) {
+		BF_PrintError("Couldnt' write block");
+		return -1;
+	}
+	
+	memcpy(next_block_p, block, sizeof(int*));
+	
+	num_records_p = block + ((BLOCK_SIZE -1) - sizeof(int) + 1);
+	memcpy(block, &record, sizeof(Record*));
+	num_of_records = 1;
+	memcpy(num_records_p, &num_of_records, sizeof(int));
+	return block_number;
+	
 }
 
 /* Deletes record with primary key 'value' */
