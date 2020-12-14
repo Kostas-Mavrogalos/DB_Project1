@@ -27,7 +27,7 @@ int HP_CreateFile(char *filename, char attrType, char *attrName, int attrLength)
 
 	if (BF_CreateFile(filename) == -1 ) {
 		BF_PrintError("Couldn't create file");
-	  return -1;
+	  	return -1;
 	}
 
   	if ( (fileDesc = BF_OpenFile(filename)) < 0 ) {
@@ -144,8 +144,9 @@ int HP_InsertEntry(HP_info header_info, Record record)
 			return -1;
 		}
 
+		block_number++;
 		next_block_p = block;
-		next_block_p += ((BLOCK_SIZE -1) - sizeof(int) + 1);
+		next_block_p += BLOCK_SIZE - sizeof(int);
 
 		if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0 ) {
 			BF_PrintError("Couldn't read block");
@@ -157,19 +158,19 @@ int HP_InsertEntry(HP_info header_info, Record record)
 			return -1;
 		}
 
-		memcpy(next_block_p, block, sizeof(int*));															//Write the next block * to the end of the first block
+		memcpy(next_block_p, block_number, sizeof(int));															//Write the next block * to the end of the first block
 	}
 
 
-	// Go to the last 8 bytes and store the number of records
+	// Go to the last 4 bytes and store the number of records
 	num_records_p = block;
-	num_records_p += ((BLOCK_SIZE -1) - sizeof(int) + 1);						//The -1 and +1 are there for clarity
+	num_records_p += BLOCK_SIZE - sizeof(int);
 	memcpy(&num_of_records, num_records_p, sizeof(int));						// Get the number of records
 	// Right before the bytes storing num_of_record resides the pointer to the next block.
-	next_block_p = num_records_p - sizeof(int*);
+	next_block_p = num_records_p - sizeof(int);
 
 	// Move the pointer for insertion sizeof(Record*) times the records inserted.
-	first_available = (Record *)(block + (num_of_records)*sizeof(Record));					//Maybe num_of_records +1
+	first_available = (Record *)(block + num_of_records*sizeof(Record));
 
 	// If there is enough space in this block, store the record.
 	if (next_block_p - (void *)first_available >= sizeof(Record)) {
@@ -195,10 +196,10 @@ int HP_InsertEntry(HP_info header_info, Record record)
 		return -1;
 	}
 
-	memcpy(next_block_p, block, sizeof(int*));
+	memcpy(next_block_p, block_number, sizeof(int));
 
 	num_records_p = block;
-	num_records_p += ((BLOCK_SIZE -1) - sizeof(int) + 1);
+	num_records_p += BLOCK_SIZE - sizeof(int);
 	memcpy(block, &record, sizeof(Record));
 	num_of_records = 1;
 	memcpy(num_records_p, &num_of_records, sizeof(int));
@@ -227,7 +228,7 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 
 	//next_block_p points to the next block
 	next_block_p = block;
-	next_block_p += BLOCK_SIZE - sizeof(int) -sizeof(int*);
+	next_block_p += BLOCK_SIZE - 2*sizeof(int);
 	//record now points to the first key # of bytes of the block, where the primary key value of the Record struct is stored
 	memcpy(read, block, key_size);
 
@@ -242,7 +243,7 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 			if (memcmp(read, value, key_size) == 0) break;		//When record changes, we need to see the first Record's id, and if it's equal to value, exit the loop
 
 			next_block_p = block;
-			next_block_p += BLOCK_SIZE - sizeof(int) -sizeof(int*);
+			next_block_p += BLOCK_SIZE - 2*sizeof(int);
 		}
 		//If the value in that record isn't the one we are looking for, move Record # of bytes forward
 		read += sizeof(Record);
