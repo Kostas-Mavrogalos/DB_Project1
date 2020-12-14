@@ -8,7 +8,7 @@
 int main () {
   char* filename = "sad.txt";
   BF_Init();
-  HP_CreateFile(filename, 'i', "DDA", 5);
+  HP_CreateFile(filename, 'i', "DDA", 4);
 
   HP_info* header_info = HP_OpenFile(filename);
 
@@ -70,8 +70,12 @@ int main () {
 
   HP_InsertEntry(*header_info, record);
 
+
   int value = 0;
-  HP_GetAllEntries(*header_info, &value);
+  HP_GetAllEntries(*header_info, (void*)&value);
+
+  value = 1;
+  HP_GetAllEntries(*header_info, (void*)&value);
 
   HP_GetAllEntries(*header_info, NULL);
 }

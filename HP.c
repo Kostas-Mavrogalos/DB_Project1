@@ -164,7 +164,6 @@ int HP_InsertEntry(HP_info header_info, Record record)
 	num_records_p = block;
 	num_records_p += BLOCK_SIZE - sizeof(int);
 	memcpy(&num_of_records, num_records_p, sizeof(int));						// Get the number of records
-	printf("%d num_of_records before\n", num_of_records);
 	// Right before the bytes storing num_of_record resides the pointer to the next block.
 	next_block_p = num_records_p - sizeof(int);
 
@@ -177,8 +176,6 @@ int HP_InsertEntry(HP_info header_info, Record record)
 
 		num_of_records++;
 		memcpy(num_records_p, &num_of_records, sizeof(int));
-		printf("%d num_of_records after\n", num_of_records);
-		printf("%d block\n", block_number);
 
 		if (BF_WriteBlock(header_info.fileDesc, block_number) < 0 ) {
 			BF_PrintError("Couldn't write block");
@@ -275,23 +272,25 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 /* Returns: number of blocks read upon success, -1 upon failure*/
 int HP_GetAllEntries(HP_info header_info, void *value)
 {
+	int val;
 	int block_number = 0;
-	int all;										//pseudo-boolean integer to know if we will print all or 1 Entry
+	int all;														//pseudo-boolean integer to know if we will print all or 1 Entry
 	void* block;
-	void* read;
 	void* next_block_p;
 	int key_size = header_info.attrLength;
+	Record* read;
 	Record record;
 	Record* test = malloc(sizeof(Record));
-	//Record test;
 
 	memset(test,'0', sizeof(Record));
 
-
-	if (value != NULL) {
-		all = 0;
-	} else {
+	if (!value) {
 		all = 1;
+		printf("sasasas\n");
+	} else {
+		val = *(int*)value;
+		printf("%d VAL\n", val);
+		all = 0;
 	}
 
 	if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){				//Read the block that has data
@@ -306,7 +305,6 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 		return -1;
 	}
 
-
 	//next_block_p points to the next block
 	next_block_p = block;
 	next_block_p += BLOCK_SIZE - 2*sizeof(int);
@@ -314,14 +312,21 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 	memcpy(&record, block, sizeof(Record));
 
 	//read now points to the first (key) # of bytes of the block, where the primary key value of the Record struct is stored
-	memcpy(read, block, key_size);
+	memcpy(read, block, sizeof(Record));
 
-printf("%d ALL\n", all);
+	// void * whatever;
+	// whatever = block;
+	// whatever += sizeof(Record);
+	// int ash;
+	// memcpy(&ash, whatever, sizeof(int));
+	// printf("%d ASH ID\n", ash);
+
 	if (all == 0) {
-printf("SEX\n");
-		while (memcmp(read, value, key_size) != 0) {
-			printf("SEX2\n");
-			if (next_block_p - read < sizeof(Record)) {					//For when the available space in the block isn't enough for a Record to fit
+		while (read->id != val) {
+		//while (memcmp(read, &val, key_size) != 0) {
+			printf("%d READ ID\n",read->id);
+			printf("%s READ NAME\n", read->name);
+			if ((void*)read - next_block_p < sizeof(Record)) {					//For when the available space in the block isn't enough for a Record to fit
 				if (next_block_p == NULL) {						//If there isn't a next block, return an error value
 					return -1;
 				}
@@ -331,13 +336,15 @@ printf("SEX\n");
 					return -1;
 				}
 
-				memcpy(read, block, key_size);
+				read = block;
+				//memcpy(read, block, sizeof(Record));
 
-				if (memcmp(read, value, key_size) == 0) break;		//When record changes, we need to see the first Record's id, and if it's equal to value, exit the loop
+				if (read->id == val) break;		//When record changes, we need to see the first Record's id, and if it's equal to value, exit the loop
 
 				next_block_p = block;
 				next_block_p += BLOCK_SIZE - 2*sizeof(int);
 			}
+
 			//If the value in that record isn't the one we are looking for, move Record # of bytes forward
 			read += sizeof(Record);
 		}
@@ -347,14 +354,15 @@ printf("SEX\n");
 			printf("This record's name is: %s\n", record.name);
 			printf("This record's surname is: %s\n", record.surname);
 			printf("This record's address is: %s\n", record.address);			//Print all the info
+			free(test);
 			return block_number;
 	}
 
 	if (all == 1) {
-printf("SEX\n");
-		while (next_block_p - read >= sizeof(Record) && next_block_p != NULL) {
+printf("SEX5\n");
+		while (next_block_p - (void*)read >= sizeof(Record) && next_block_p != NULL) {
 			printf("SEX21\n");
-			 if (next_block_p - read < sizeof(Record)) {					//For when the available space in the block isn't enough for a Record to fit
+			 if (next_block_p - (void*)read < sizeof(Record)) {					//For when the available space in the block isn't enough for a Record to fit
 				memcpy(&block_number, next_block_p, sizeof(int));
 				if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){
 					BF_PrintError("Couldn't read block");
@@ -368,17 +376,15 @@ printf("SEX\n");
 				next_block_p += BLOCK_SIZE - 2*sizeof(int);
 			}
 
-
-
 			memcpy(&record, read, sizeof(Record));
 
-			//If the record isn't NULL, meaning it has stuff in it, print them
-			if (memcmp(&record, test, sizeof(Record)) != 0) {
-				printf("This record's id is: %d\n", record.id);
-				printf("This record's name is: %s\n", record.name);
-				printf("This record's surname is: %s\n", record.surname);
-				printf("This record's address is: %s\n\n", record.address);					//Print all the info of the record
-			}
+			// //If the record isn't NULL, meaning it has stuff in it, print them
+			// if (memcmp(&record, test, sizeof(Record)) != 0) {
+			// 	printf("This record's id is: %d\n", record.id);
+			// 	printf("This record's name is: %s\n", record.name);
+			// 	printf("This record's surname is: %s\n", record.surname);
+			// 	printf("This record's address is: %s\n\n", record.address);					//Print all the info of the record
+			// }
 
 			//Move the variable Record # of bytes forward
 			read += sizeof(Record);
