@@ -240,8 +240,8 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 	record = block;
 	memcpy(&read, record, sizeof(Record));
 
-	while (memcmp(read.id, value, key_size) != 0) {
-		if (next_block_p - record < sizeof(Record)) {					//For when the available space in the block isn't enough for a Record to fit
+	while (memcmp(&read.id, value, key_size) != 0) {
+		if (next_block_p - (void*)record < sizeof(Record)) {					//For when the available space in the block isn't enough for a Record to fit
 			if (next_block_p == NULL) {						//If there isn't a next block
 				return -1;
 			}
@@ -259,7 +259,7 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 			next_block_p += BLOCK_SIZE - 2*sizeof(int);
 		}else{
 			//If the value in that record isn't the one we are looking for, move Record # of bytes forward
-			read += sizeof(Record);
+			record += sizeof(Record);
 		}
 	}
 
@@ -399,7 +399,8 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 // }
 
 int HP_GetAllEntries(HP_info header_info, void *value){
-	block_number = 1;
+	int block_number = 1;
+	void* block;
 	if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0 ) {
 		BF_PrintError("Couldn't read block");
 		return -1;
