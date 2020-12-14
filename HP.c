@@ -144,7 +144,7 @@ int HP_InsertEntry(HP_info header_info, Record record)
 			return -1;
 		}
 
-		block_number++;
+		block_number = BF_GetBlockCounter(header_info.fileDesc) - 1;
 		next_block_p = block;
 		next_block_p += BLOCK_SIZE - sizeof(int);
 
@@ -158,7 +158,7 @@ int HP_InsertEntry(HP_info header_info, Record record)
 			return -1;
 		}
 
-		memcpy(next_block_p, block_number, sizeof(int));															//Write the next block * to the end of the first block
+		memcpy(next_block_p, &block_number, sizeof(int));															//Write the next block * to the end of the first block
 	}
 
 
@@ -166,6 +166,7 @@ int HP_InsertEntry(HP_info header_info, Record record)
 	num_records_p = block;
 	num_records_p += BLOCK_SIZE - sizeof(int);
 	memcpy(&num_of_records, num_records_p, sizeof(int));						// Get the number of records
+	printf("%d num_of_records before\n", num_of_records);
 	// Right before the bytes storing num_of_record resides the pointer to the next block.
 	next_block_p = num_records_p - sizeof(int);
 
@@ -175,8 +176,17 @@ int HP_InsertEntry(HP_info header_info, Record record)
 	// If there is enough space in this block, store the record.
 	if (next_block_p - (void *)first_available >= sizeof(Record)) {
 		memcpy(first_available, &record, sizeof(Record));
+		Record tap;
+		memcpy(&tap, first_available, sizeof(Record));
+		printf("This record's id is: %d\n", tap.id);
+		printf("This record's name is: %s\n", tap.name);
+		printf("This record's surname is: %s\n", tap.surname);
+		printf("This record's address is: %s\n\n", tap.address);
+
 		num_of_records++;
 		memcpy(num_records_p, &num_of_records, sizeof(int));
+		printf("%d num_of_records after\n", num_of_records);
+		printf("%d block\n", block_number);
 		return block_number;
 	}
 
@@ -196,12 +206,12 @@ int HP_InsertEntry(HP_info header_info, Record record)
 		return -1;
 	}
 
-	memcpy(next_block_p, block_number, sizeof(int));
+	memcpy(next_block_p, &block_number, sizeof(int));
 
 	num_records_p = block;
 	num_records_p += BLOCK_SIZE - sizeof(int);
 	memcpy(block, &record, sizeof(Record));
-	num_of_records = 1;
+	num_of_records = 0;
 	memcpy(num_records_p, &num_of_records, sizeof(int));
 	return block_number;
 }
@@ -221,7 +231,7 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 
 	if (block_number == 1) return -1;
 
-	if (BF_ReadBlock(header_info.fileDesc, 1, &block) < 0){
+	if (BF_ReadBlock(header_info.fileDesc, 1, &block) < 0){				//Read the block that has data
 		BF_PrintError("Couldn't read block");
 		return -1;
 	}
@@ -229,15 +239,21 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 	//next_block_p points to the next block
 	next_block_p = block;
 	next_block_p += BLOCK_SIZE - 2*sizeof(int);
-	//record now points to the first key # of bytes of the block, where the primary key value of the Record struct is stored
+
+	//record now points to the first (key) # of bytes of the block, where the primary key value of the Record struct is stored
 	memcpy(read, block, key_size);
 
 	while (memcmp(read, value, key_size) != 0) {
-		if (next_block_p - read < sizeof(Record)) {
-			if (next_block_p == NULL) {
+		if (next_block_p - read < sizeof(Record)) {					//For when the available space in the block isn't enough for a Record to fit
+			if (next_block_p == NULL) {						//If there isn't a next block
 				return -1;
 			}
-			memcpy(block, next_block_p, sizeof(int*));
+			memcpy(&block_number, next_block_p, sizeof(int));
+			if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){
+				BF_PrintError("Couldn't read block");
+				return -1;
+			}
+
 			memcpy(read, block, key_size);
 
 			if (memcmp(read, value, key_size) == 0) break;		//When record changes, we need to see the first Record's id, and if it's equal to value, exit the loop
@@ -255,38 +271,113 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 	return 0;
 }
 
+
 /* Find and print all entries with primary key 'value' */
 /* Returns: number of blocks read upon success, -1 upon failure*/
-int HP_GetAllEntries(	HP_info header_info, void *value)
+int HP_GetAllEntries(HP_info header_info, void *value)
 {
 	int block_number = 0;
+	int all;										//pseudo-boolean integer to know if we will print all or 1 Entry
 	void* block;
-	void* temp;
-	int num_of_blocks;
+	void* read;
+	void* next_block_p;
+	int key_size = header_info.attrLength;
+	Record* record;
+	Record* test = NULL;
 
+	if (value >= 0) {
+		all = 0;
+	} else if (value == NULL) {
+		all = 1;
+	}
+
+	if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){				//Read the block that has data
+		BF_PrintError("Couldn't read block");
+		return -1;
+	}
+
+	block += BLOCK_SIZE - sizeof(int);
+	memcpy(&block_number, block, sizeof(int));
 	if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){
 		BF_PrintError("Couldn't read block");
 		return -1;
 	}
 
-	temp = block;
-	temp += ((BLOCK_SIZE -1) - sizeof(int) + 1);
 
-	//num_of_blocks now has the total # of blocks that have been made
-	num_of_blocks = *temp;
+	//next_block_p points to the next block
+	next_block_p = block;
+	next_block_p += BLOCK_SIZE - 2*sizeof(int);
+	printf("d\n");
+	memcpy(record, block, sizeof(Record));
+printf("d\n");
+	//read now points to the first (key) # of bytes of the block, where the primary key value of the Record struct is stored
+	memcpy(read, block, key_size);
+printf("d\n");
+printf("%d\n", all);
+	if (all == 0) {
 
-	for (int i = 0; i <= num_of_blocks; i++) {
-		if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){
-			BF_PrintError("Couldn't read block");
-			return -1;
+		while (memcmp(read, value, key_size) != 0) {
+			if (next_block_p - read < sizeof(Record)) {					//For when the available space in the block isn't enough for a Record to fit
+				if (next_block_p == NULL) {						//If there isn't a next block, return an error value
+					return -1;
+				}
+				memcpy(&block_number, next_block_p, sizeof(int));
+				if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){
+					BF_PrintError("Couldn't read block");
+					return -1;
+				}
+
+				memcpy(read, block, key_size);
+
+				if (memcmp(read, value, key_size) == 0) break;		//When record changes, we need to see the first Record's id, and if it's equal to value, exit the loop
+
+				next_block_p = block;
+				next_block_p += BLOCK_SIZE - 2*sizeof(int);
+			}
+			//If the value in that record isn't the one we are looking for, move Record # of bytes forward
+			read += sizeof(Record);
 		}
 
-
-
-		//Move onto the next block
-		block += BLOCK_SIZE;
+			memcpy(record, read, sizeof(Record*));													//So that record points to the correct Record to print
+			printf("Found record with id: %d\n", record->id);
+			printf("This record's name is: %s\n", record->name);
+			printf("This record's surname is: %s\n", record->surname);
+			printf("This record's address is: %s\n", record->address);			//Print all the info
+			return block_number;
 	}
 
+	if (all == 1) {
 
-	return block_number;
+		while (next_block_p - read >= sizeof(Record) && next_block_p != NULL) {
+			 if (next_block_p - read < sizeof(Record)) {					//For when the available space in the block isn't enough for a Record to fit
+				memcpy(&block_number, next_block_p, sizeof(int));
+				if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){
+					BF_PrintError("Couldn't read block");
+					return -1;
+				}
+
+				memcpy(read, block, key_size);
+				memcpy(record, read, sizeof(Record));							//Whenever we change blocks, record must change in order to print the next Record
+
+				next_block_p = block;
+				next_block_p += BLOCK_SIZE - 2*sizeof(int);
+			}
+
+			//If the record isn't NULL, meaning it has stuff in it, print them
+			if (memcmp(record, test, sizeof(Record)) != 0) {
+				printf("This record's id is: %d\n", record->id);
+				printf("This record's name is: %s\n", record->name);
+				printf("This record's surname is: %s\n", record->surname);
+				printf("This record's address is: %s\n\n", record->address);					//Print all the info of the record
+			}
+
+			//Move both variables Record # of bytes forward
+			read += sizeof(Record);
+			record += sizeof(Record);
+		}
+
+		return block_number;
+	}
+
+	return -1;
 }
