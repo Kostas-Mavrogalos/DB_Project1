@@ -218,11 +218,11 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 {
 	int block_number;
 	void* block;
-	void* read;
 	void* next_block_p;
 	int key_size = header_info.attrLength;
-	Record* record = NULL;							//To clear the Record that is to be deleted
-
+	Record* record;							//To clear the Record that is to be deleted
+	Record read;
+	
 	block_number = BF_GetBlockCounter(header_info.fileDesc);
 
 	if (block_number == 1) return -1;
@@ -237,10 +237,11 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 	next_block_p += BLOCK_SIZE - 2*sizeof(int);
 
 	//record now points to the first (key) # of bytes of the block, where the primary key value of the Record struct is stored
-	memcpy(read, block, key_size);
+	record = block;
+	memcpy(&read, record, sizeof(Record));
 
-	while (memcmp(read, value, key_size) != 0) {
-		if (next_block_p - read < sizeof(Record)) {					//For when the available space in the block isn't enough for a Record to fit
+	while (memcmp(read.id, value, key_size) != 0) {
+		if (next_block_p - record < sizeof(Record)) {					//For when the available space in the block isn't enough for a Record to fit
 			if (next_block_p == NULL) {						//If there isn't a next block
 				return -1;
 			}
@@ -249,20 +250,21 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 				BF_PrintError("Couldn't read block");
 				return -1;
 			}
+			record = block;
+			memcpy(&read, record, sizeof(Record));
 
-			memcpy(read, block, key_size);
-
-			if (memcmp(read, value, key_size) == 0) break;		//When record changes, we need to see the first Record's id, and if it's equal to value, exit the loop
+			//if (memcmp(read.id, value, key_size) == 0) break;		//When record changes, we need to see the first Record's id, and if it's equal to value, exit the loop
 
 			next_block_p = block;
 			next_block_p += BLOCK_SIZE - 2*sizeof(int);
+		}else{
+			//If the value in that record isn't the one we are looking for, move Record # of bytes forward
+			read += sizeof(Record);
 		}
-		//If the value in that record isn't the one we are looking for, move Record # of bytes forward
-		read += sizeof(Record);
 	}
 
 	//Empty the value and fill it with 0's
-	memcpy(read, record, sizeof(Record));
+	memset(record, '0', sizeof(Record));
 
 	return 0;
 }
