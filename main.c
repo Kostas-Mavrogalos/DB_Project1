@@ -134,6 +134,7 @@ int main () {
   strcpy(record.name, "holas");
   strcpy(record.surname, "cage");
   strcpy(record.address, "ex");
+
 printf("ASDASDSADD\n");
   void * blank;
 
@@ -276,5 +277,12 @@ printf("%s\n", record.address);
 //  HP_GetAllEntries(*header_info, (void*)&value);
 
 printf("asdaasdadasdasd\n");
+
+int* kati = 0;
+  HP_DeleteEntry(*header_info, kati);
+
+  //FOR TOMOROOOOOOW
+
+  
   //HP_GetAllEntries(*header_info, NULL);
 }
