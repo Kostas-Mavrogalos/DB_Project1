@@ -287,7 +287,6 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 	Record empty_record;
 
 	memset(&empty_record, 0, sizeof(Record));
-	printf("Hi!\n");
 // 	if (!value) {
 // 		all = 1;
 // 		printf("sasasas\n");
@@ -316,6 +315,7 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 
 	read = (Record*)block; 
 	memcpy(&record, read, sizeof(Record));
+	printf("Hi!\n");
 
 	//read now points to the first (key) # of bytes of the block, where the primary key value of the Record struct is stored
 	//memcpy(read, block, sizeof(Record));
