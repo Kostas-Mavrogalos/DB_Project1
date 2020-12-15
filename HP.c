@@ -124,8 +124,8 @@ int HP_InsertEntry(HP_info header_info, Record record)
 	int block_number;
 	int num_of_records;
 	void *block;
-	int *num_records_p;
-	int *next_block_p;
+	void *num_records_p;
+	void *next_block_p;
 	void* first_available;
 
 	// block_number is the index of the last block, where the insertion is attempted.
