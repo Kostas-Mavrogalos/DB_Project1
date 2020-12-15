@@ -337,7 +337,7 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 			// If the end of a block is reached, move the block pointer to the next block, if there is one
 			if ((void*)next_block_p - (void*)read < sizeof(Record)) {
 				// If end of file reached, no valid key was given
-				if (next_block_p == NULL) {
+				if (memcmp(next_block_p, (char[sizeof(int)]){0}, sizeof(int) ) == 0) {
 					return -1;
 				}
 				memcpy(&block_number, next_block_p, sizeof(int));
