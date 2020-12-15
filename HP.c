@@ -397,18 +397,18 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 // 	return -1;
 }
 
-int HP_GetAllEntries(HP_info header_info, void *value){
-	int block_number = 1;
-	void* block;
-	if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0 ) {
-		BF_PrintError("Couldn't read block");
-		return -1;
-	}
-	Record rec;
-	Record* read;
-	read = block;
-	memcpy(&rec, read, sizeof(Record));
-	printf("ID: %d", rec.id);
-	printf("name: %s", rec.name);
-	printf("surname: %s", rec.surname);
-}	
+// int HP_GetAllEntries(HP_info header_info, void *value){
+// 	int block_number = 1;
+// 	void* block;
+// 	if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0 ) {
+// 		BF_PrintError("Couldn't read block");
+// 		return -1;
+// 	}
+// 	Record rec;
+// 	Record* read;
+// 	read = block;
+// 	memcpy(&rec, read, sizeof(Record));
+// 	printf("ID: %d", rec.id);
+// 	printf("name: %s", rec.name);
+// 	printf("surname: %s", rec.surname);
+// }	
