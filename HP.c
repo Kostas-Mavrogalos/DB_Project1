@@ -328,7 +328,6 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 				printf("This record's name is: %s\n", record.name);
 				printf("This record's surname is: %s\n", record.surname);
 				printf("This record's address is: %s\n", record.address);
-				return block_number;
 			}
 			//If the value in that record isn't the one we are looking for, move Record # of bytes forward
 			read += sizeof(Record);
@@ -352,6 +351,7 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 			}
 			memcpy(&record, read, sizeof(Record));
 		}
+		return block_number;
 	}
 	
 	// otherwise, print only the entry of id val, if it exists
