@@ -89,6 +89,7 @@ int main () {
   memcpy(&rec, block, sizeof(Record));
   printf("Id: %d\n", rec.id);
   BF_ReadBlock(header_info->fileDesc, 2, &block);
-  memcpy(&rec, block, sizeof(Record));
+  memcpy(&rec, (Record*)block, sizeof(Record));
   printf("Id: %d\n", rec.id);
+  printf("Name: %s\n", rec.name);
 }

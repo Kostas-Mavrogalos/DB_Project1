@@ -126,7 +126,7 @@ int HP_InsertEntry(HP_info header_info, Record record)
 	void *block;
 	void *num_records_p;
 	void *next_block_p;
-	Record* first_available;
+	void* first_available;
 
 	// block_number is the index of the last block, where the insertion is attempted.
 	block_number = BF_GetBlockCounter(header_info.fileDesc) - 1;
@@ -175,6 +175,7 @@ int HP_InsertEntry(HP_info header_info, Record record)
 		memcpy(first_available, &record, sizeof(Record));
 
 		num_of_records++;
+		printf("%d records in block# %d for id %d\n",num_of_records, block_number, record.id);
 		memcpy(num_records_p, &num_of_records, sizeof(int));
 
 		if (BF_WriteBlock(header_info.fileDesc, block_number) < 0 ) {
@@ -200,8 +201,8 @@ int HP_InsertEntry(HP_info header_info, Record record)
 
 	num_records_p = block;
 	num_records_p += BLOCK_SIZE - sizeof(int);
-	memcpy(block, &record, sizeof(Record));
-	num_of_records = 0;
+	memcpy((Record*)block, &record, sizeof(Record));
+	num_of_records = 1;
 	memcpy(num_records_p, &num_of_records, sizeof(int));
 
 	if (BF_WriteBlock(header_info.fileDesc, block_number) < 0 ) {
