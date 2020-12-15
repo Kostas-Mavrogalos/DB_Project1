@@ -289,6 +289,10 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 /* Returns: number of blocks read upon success, -1 upon failure*/
 int HP_GetAllEntries(HP_info header_info, void *value)
 {
+	if(value = NULL){
+		printf("u r mom ge\n");
+		return -1;
+	}
 	printf("Hi!\n");
 	int block_number = 1;
 	int all;														//pseudo-boolean integer to know if we will print all or 1 Entry
