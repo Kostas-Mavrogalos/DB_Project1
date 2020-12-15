@@ -241,10 +241,19 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 	record = block;
 	memcpy(&read, (Record*)record, sizeof(Record));
 
-	while (memcmp(&read.id, (int*)value, key_size) != 0) {
+	while (1) {
+		printf("ID: %d\n", read.id);
+		if (memcmp(&read.id, (int*)value, key_size) != 0){
+			//Empty the value and fill it with 0's
+			Record del;
+			memset(record, 0, sizeof(Record));
+			memcpy(&read, record, sizeof(Record));
+			printf("id: %d\n", read.id);
+			return 0;
+		}
 		printf("Konnichiwa\n");
 		if (next_block_p - (void*)record < sizeof(Record)) {					//For when the available space in the block isn't enough for a Record to fit
-			if (next_block_p == NULL) {						//If there isn't a next block
+			if (memcmp(next_block_p, (char[sizeof(int)]){0}, sizeof(int))==0) {						//If there isn't a next block
 				return -1;
 			}
 			memcpy(&block_number, next_block_p, sizeof(int));
@@ -257,20 +266,21 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 
 			//if (memcmp(read.id, value, key_size) == 0) break;		//When record changes, we need to see the first Record's id, and if it's equal to value, exit the loop
 
-			next_block_p = block;
+			next_block_p = (int*)block;
 			next_block_p += BLOCK_SIZE - 2*sizeof(int);
 		}else{
 			//If the value in that record isn't the one we are looking for, move Record # of bytes forward
 			record += sizeof(Record);
+			memcpy(&read, (Record*)record, sizeof(Record));
 		}
 	}
 
-	//Empty the value and fill it with 0's
-	Record del;
-	memset(record, 0, sizeof(Record));
-	memcpy(&read, record, sizeof(Record));
-	printf("id: %d\n", read.id);
-	return 0;
+// 	//Empty the value and fill it with 0's
+// 	Record del;
+// 	memset(record, 0, sizeof(Record));
+// 	memcpy(&read, record, sizeof(Record));
+// 	printf("id: %d\n", read.id);
+// 	return 0;
 }
 
 
