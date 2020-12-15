@@ -204,7 +204,7 @@ int HP_InsertEntry(HP_info header_info, Record record)
 	memcpy((Record*)block, &record, sizeof(Record));
 	num_of_records = 1;
 	memcpy(num_records_p, &num_of_records, sizeof(int));
-
+	printf("%d records in block# %d for id %d\n",num_of_records, block_number, record.id);
 	if (BF_WriteBlock(header_info.fileDesc, block_number) < 0 ) {
 		BF_PrintError("Couldn't write block");
 		return -1;
@@ -280,7 +280,7 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 	int block_number = 1;
 	int all;														//pseudo-boolean integer to know if we will print all or 1 Entry
 	void* block;
-	int* next_block_p;
+	void* next_block_p;
 	int key_size = header_info.attrLength;
 	Record* read;
 	Record record;
@@ -323,7 +323,7 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 	//if (all == 0) {
 		while (1) {
 			
-			if (memcmp(&record, char[sizeof(Record)]{0}, sizeof(Record)) != 0 
+			if (memcmp(&record, (char[sizeof(Record)]){0}, sizeof(Record)) != 0
 			    && memcmp(&record.id, value, key_size) == 0 ){
 				//Print all the info of record with queried id
 				printf("Found record with id: %d\n", record.id);
