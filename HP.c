@@ -277,7 +277,7 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 /* Returns: number of blocks read upon success, -1 upon failure*/
 int HP_GetAllEntries(HP_info header_info, void *value)
 {
-	int block_number = 0;
+	int block_number = 1;
 	int all;														//pseudo-boolean integer to know if we will print all or 1 Entry
 	void* block;
 	int* next_block_p;
@@ -304,13 +304,12 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 	}
 	
 	// Then, using the index stored at the block's last bytes, go to the next block (1).
-	block += BLOCK_SIZE - sizeof(int);
-	memcpy(&block_number, (int*)block, sizeof(int));
-	if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){
-		BF_PrintError("Couldn't read block");
-		return -1;
-	}
-	printf("block num: %d\n", block_number);
+// 	block += BLOCK_SIZE - sizeof(int);
+// 	memcpy(&block_number, (int*)block, sizeof(int));
+// 	if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){
+// 		BF_PrintError("Couldn't read block");
+// 		return -1;
+// 	}
 	//next_block_p points to the next block
 	next_block_p = (int*)block;
 	next_block_p += BLOCK_SIZE - 2*sizeof(int);
