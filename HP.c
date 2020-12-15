@@ -289,7 +289,7 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 /* Returns: number of blocks read upon success, -1 upon failure*/
 int HP_GetAllEntries(HP_info header_info, void *value)
 {
-	if(value = NULL){
+	if(value == NULL){
 		printf("u r mom ge\n");
 		return -1;
 	}

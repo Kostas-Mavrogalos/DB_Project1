@@ -92,6 +92,7 @@ int main () {
   memcpy(&rec, (Record*)block, sizeof(Record));
   printf("Id: %d\n", rec.id);
   printf("Name: %s\n", rec.name);
-  val = 1; 
-  HP_GetAllEntries(*header_info, &val);
+  val = 1;
+ int* dick = NULL;
+  HP_GetAllEntries(*header_info, dick);
 }
