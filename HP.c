@@ -333,7 +333,7 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 			}
 			
 			//If the value in that record isn't the one we are looking for, move Record # of bytes forward
-			read += (Record*)sizeof(Record);
+			read += sizeof(Record);
 			// If the end of a block is reached, move the block pointer to the next block, if there is one
 			if ((void*)next_block_p - (void*)read < sizeof(Record)) {
 				// If end of file reached, no valid key was given
