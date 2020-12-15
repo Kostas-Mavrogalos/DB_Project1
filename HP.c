@@ -282,7 +282,7 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 	void* block;
 	void* next_block_p;
 	int key_size = header_info.attrLength;
-	Record* read;
+	void* read;
 	Record record;
 	Record empty_record;
 
@@ -314,8 +314,7 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 	next_block_p += BLOCK_SIZE - 2*sizeof(int);
 
 	read = (Record*)block; 
-	memcpy(&record, read, sizeof(Record));
-	printf("Hi!\n");
+	memcpy(&record, read, sizeof(Record));	
 
 	//read now points to the first (key) # of bytes of the block, where the primary key value of the Record struct is stored
 	//memcpy(read, block, sizeof(Record));
@@ -332,6 +331,7 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 				printf("This record's address is: %s\n", record.address);
 				return block_number;
 			}
+			printf("Hi!\n");
 			//If the value in that record isn't the one we are looking for, move Record # of bytes forward
 			read += sizeof(Record);
 			// If the end of a block is reached, move the block pointer to the next block, if there is one
