@@ -277,6 +277,7 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 /* Returns: number of blocks read upon success, -1 upon failure*/
 int HP_GetAllEntries(HP_info header_info, void *value)
 {
+	printf("Hi!\n");
 	int block_number = 1;
 	int all;														//pseudo-boolean integer to know if we will print all or 1 Entry
 	void* block;
@@ -321,7 +322,7 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 
 	//if (all == 0) {
 		while (1) {
-			printf("Hi!\n");
+			
 			if (memcmp(&record, (char[sizeof(Record)]){0}, sizeof(Record)) != 0
 			    && memcmp(&record.id, value, key_size) == 0 ){
 				//Print all the info of record with queried id
