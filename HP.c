@@ -287,7 +287,7 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 	Record empty_record;
 
 	memset(&empty_record, 0, sizeof(Record));
-
+	printf("Hi!\n");
 // 	if (!value) {
 // 		all = 1;
 // 		printf("sasasas\n");
