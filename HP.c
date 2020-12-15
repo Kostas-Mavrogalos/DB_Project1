@@ -340,7 +340,7 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 				read = (Record*)block;
 				memcpy(&record, read, sizeof(Record));
 
-				if (record.id == val) break;		//When record changes, we need to see the first Record's id, and if it's equal to value, exit the loop
+				if (memcmp(&record.id, value, key_size) == 0) break;		//When record changes, we need to see the first Record's id, and if it's equal to value, exit the loop
 
 				next_block_p = block;
 				next_block_p += BLOCK_SIZE - 2*sizeof(int);
