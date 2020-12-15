@@ -321,7 +321,7 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 
 	//if (all == 0) {
 		while (1) {
-			
+			printf("Hi!\n");
 			if (memcmp(&record, (char[sizeof(Record)]){0}, sizeof(Record)) != 0
 			    && memcmp(&record.id, value, key_size) == 0 ){
 				//Print all the info of record with queried id
@@ -331,9 +331,9 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 				printf("This record's address is: %s\n", record.address);
 				return block_number;
 			}
-			printf("Hi!\n");
+			
 			//If the value in that record isn't the one we are looking for, move Record # of bytes forward
-			read += sizeof(Record);
+			read += (Record*)sizeof(Record);
 			// If the end of a block is reached, move the block pointer to the next block, if there is one
 			if ((void*)next_block_p - (void*)read < sizeof(Record)) {
 				// If end of file reached, no valid key was given
