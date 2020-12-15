@@ -321,9 +321,19 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 	//memcpy(read, block, sizeof(Record));
 
 	//if (all == 0) {
-		while (memcmp(&record.id, value, key_size) != 0) {
-			printf("%d READ ID\n",record.id);
-			printf("%s READ NAME\n", record.name);
+		while (1) {
+			
+			if (memcmp(&record, char[sizeof(Record)]{0}, sizeof(Record)) != 0 
+			    && memcmp(&record.id, value, key_size) == 0 ){
+				//Print all the info of record with queried id
+				printf("Found record with id: %d\n", record.id);
+				printf("This record's name is: %s\n", record.name);
+				printf("This record's surname is: %s\n", record.surname);
+				printf("This record's address is: %s\n", record.address);
+				return block_number;
+			}
+			//If the value in that record isn't the one we are looking for, move Record # of bytes forward
+			read += sizeof(Record);
 			// If the end of a block is reached, move the block pointer to the next block, if there is one
 			if ((void*)next_block_p - (void*)read < sizeof(Record)) {
 				// If end of file reached, no valid key was given
@@ -339,22 +349,18 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 				read = (Record*)block;
 				memcpy(&record, read, sizeof(Record));
 
-				if (memcmp(&record.id, value, key_size) == 0) break;		//When record changes, we need to see the first Record's id, and if it's equal to value, exit the loop
-
 				next_block_p = block;
 				next_block_p += BLOCK_SIZE - 2*sizeof(int);
 			}
-
-			//If the value in that record isn't the one we are looking for, move Record # of bytes forward
-			read += sizeof(Record);
 			memcpy(&record, read, sizeof(Record));
+
 		}
-			//Print all the info of record with queried id
-			printf("Found record with id: %d\n", record.id);
-			printf("This record's name is: %s\n", record.name);
-			printf("This record's surname is: %s\n", record.surname);
-			printf("This record's address is: %s\n", record.address);
-			return block_number;
+// 			//Print all the info of record with queried id
+// 			printf("Found record with id: %d\n", record.id);
+// 			printf("This record's name is: %s\n", record.name);
+// 			printf("This record's surname is: %s\n", record.surname);
+// 			printf("This record's address is: %s\n", record.address);
+// 			return block_number;
 	//}
 
 // 	if (all == 1) {
