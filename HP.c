@@ -221,7 +221,7 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 	void* block;
 	void* next_block_p;
 	int key_size = header_info.attrLength;
-	Record* record;							//To clear the Record that is to be deleted
+	void* record;							//To clear the Record that is to be deleted
 	Record read;
 
 	block_number = BF_GetBlockCounter(header_info.fileDesc);
@@ -239,9 +239,10 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 
 	//record now points to the first (key) # of bytes of the block, where the primary key value of the Record struct is stored
 	record = block;
-	memcpy(&read, record, sizeof(Record));
+	memcpy(&read, (Record*)record, sizeof(Record));
 
 	while (memcmp(&read.id, value, key_size) != 0) {
+		printf("Konnichiwa\n");
 		if (next_block_p - (void*)record < sizeof(Record)) {					//For when the available space in the block isn't enough for a Record to fit
 			if (next_block_p == NULL) {						//If there isn't a next block
 				return -1;
@@ -252,7 +253,7 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 				return -1;
 			}
 			record = block;
-			memcpy(&read, record, sizeof(Record));
+			memcpy(&read, (Record*)record, sizeof(Record));
 
 			//if (memcmp(read.id, value, key_size) == 0) break;		//When record changes, we need to see the first Record's id, and if it's equal to value, exit the loop
 
