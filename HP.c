@@ -310,7 +310,7 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 		BF_PrintError("Couldn't read block");
 		return -1;
 	}
-
+	printf("block num: %d\n", block_number);
 	//next_block_p points to the next block
 	next_block_p = (int*)block;
 	next_block_p += BLOCK_SIZE - 2*sizeof(int);
