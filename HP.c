@@ -222,7 +222,7 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 	int key_size = header_info.attrLength;
 	Record* record;							//To clear the Record that is to be deleted
 	Record read;
-	
+
 	block_number = BF_GetBlockCounter(header_info.fileDesc);
 
 	if (block_number == 1) return -1;
@@ -264,8 +264,10 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 	}
 
 	//Empty the value and fill it with 0's
-	memset(record, '0', sizeof(Record));
-
+	Record del;
+	memset(record, 0, sizeof(Record));
+	memcpy(&read, record, sizeof(Record));
+	printf("id: %d\n", read.id);
 	return 0;
 }
 

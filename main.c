@@ -7,6 +7,7 @@
 
 int main () {
   char* filename = "sad.txt";
+	void *block;
   BF_Init();
   HP_CreateFile(filename, 'i', "DDA", 4);
 
@@ -70,12 +71,24 @@ int main () {
 
   HP_InsertEntry(*header_info, record);
 
-
-  int value = 0;
-  HP_GetAllEntries(*header_info, (void*)&value);
-
-  value = 1;
-  HP_GetAllEntries(*header_info, (void*)&value);
-
-  HP_GetAllEntries(*header_info, NULL);
+  int val = 0;
+  Record rec;
+  Record r;
+  BF_ReadBlock(header_info->fileDesc, 1, &block);
+  memcpy(&rec, block, sizeof(Record));
+  printf("Name: %s\n", rec.name);
+  HP_DeleteEntry(*header_info, &val);
+  BF_ReadBlock(header_info->fileDesc, 1, &block);
+  memcpy(&rec, block, sizeof(Record));
+  printf("Id: %d\n", rec.id);
+  printf("Name: %s\n", rec.name);
+  if(memcmp(&rec, (char[sizeof(Record)]){0}, sizeof(Record))==0){
+	printf("That's a wet ass pussy.\n");
+  }
+  block += 4*sizeof(Record);
+  memcpy(&rec, block, sizeof(Record));
+  printf("Id: %d\n", rec.id);
+  BF_ReadBlock(header_info->fileDesc, 2, &block);
+  memcpy(&rec, block, sizeof(Record));
+  printf("Id: %d\n", rec.id);
 }
