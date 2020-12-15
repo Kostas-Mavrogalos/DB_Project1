@@ -241,7 +241,7 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 	record = block;
 	memcpy(&read, (Record*)record, sizeof(Record));
 
-	while (memcmp(&read.id, value, key_size) != 0) {
+	while (memcmp(&read.id, (int*)value, key_size) != 0) {
 		printf("Konnichiwa\n");
 		if (next_block_p - (void*)record < sizeof(Record)) {					//For when the available space in the block isn't enough for a Record to fit
 			if (next_block_p == NULL) {						//If there isn't a next block
