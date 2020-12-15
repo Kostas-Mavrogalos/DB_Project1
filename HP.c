@@ -171,7 +171,7 @@ int HP_InsertEntry(HP_info header_info, Record record)
 	first_available = (Record *)(block + num_of_records*sizeof(Record));
 
 	// If there is enough space in this block, store the record.
-	if (next_block_p - (void *)first_available >= sizeof(Record)) {
+	if ((void*)next_block_p - (void *)first_available >= sizeof(Record)) {
 		memcpy(first_available, &record, sizeof(Record));
 
 		num_of_records++;
@@ -277,7 +277,6 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 /* Returns: number of blocks read upon success, -1 upon failure*/
 int HP_GetAllEntries(HP_info header_info, void *value)
 {
-	int val = (int)value;
 	int block_number = 0;
 	int all;														//pseudo-boolean integer to know if we will print all or 1 Entry
 	void* block;
@@ -287,7 +286,7 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 	Record record;
 	Record empty_record;
 
-	memset(empty_record, 0, sizeof(Record));
+	memset(&empty_record, 0, sizeof(Record));
 
 // 	if (!value) {
 // 		all = 1;
@@ -327,7 +326,7 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 			printf("%d READ ID\n",record.id);
 			printf("%s READ NAME\n", record.name);
 			// If the end of a block is reached, move the block pointer to the next block, if there is one
-			if (next_block_p - (void*)read < sizeof(Record)) {
+			if ((void*)next_block_p - (void*)read < sizeof(Record)) {
 				// If end of file reached, no valid key was given
 				if (next_block_p == NULL) {
 					return -1;
