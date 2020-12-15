@@ -71,25 +71,27 @@ int main () {
 
   HP_InsertEntry(*header_info, record);
 
-  int val = 0;
+  int val = 2;
   Record rec;
   Record r;
   BF_ReadBlock(header_info->fileDesc, 1, &block);
   memcpy(&rec, block, sizeof(Record));
-  printf("Name: %s\n", rec.name);
+
   HP_DeleteEntry(*header_info, &val);
   BF_ReadBlock(header_info->fileDesc, 1, &block);
   memcpy(&rec, block, sizeof(Record));
-  printf("Id: %d\n", rec.id);
-  printf("Name: %s\n", rec.name);
+
   if(memcmp(&rec, (char[sizeof(Record)]){0}, sizeof(Record))==0){
 	printf("That's a wet ass pussy.\n");
   }
-  block += 4*sizeof(Record);
+  block += 1*sizeof(Record);
   memcpy(&rec, block, sizeof(Record));
-  printf("Id: %d\n", rec.id);
-  BF_ReadBlock(header_info->fileDesc, 2, &block);
+
+  BF_ReadBlock(header_info->fileDesc, 1, &block);
+  block += 2*sizeof(Record);
   memcpy(&rec, (Record*)block, sizeof(Record));
   printf("Id: %d\n", rec.id);
   printf("Name: %s\n", rec.name);
+  val = 1; 
+  HP_GetAllEntries(*header_info, &val);
 }

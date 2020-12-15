@@ -243,12 +243,13 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 
 	while (1) {
 		printf("ID: %d\n", read.id);
-		if (memcmp(&read.id, (int*)value, key_size) != 0){
+		if (memcmp(&read.id, (int*)value, key_size) == 0){
 			//Empty the value and fill it with 0's
 			Record del;
 			memset(record, 0, sizeof(Record));
 			memcpy(&read, record, sizeof(Record));
 			printf("id: %d\n", read.id);
+			BF_WriteBlock(header_info.fileDesc, block_number);
 			return 0;
 		}
 		printf("Konnichiwa\n");
