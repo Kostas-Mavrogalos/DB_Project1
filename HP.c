@@ -143,16 +143,17 @@ int HP_InsertEntry(HP_info header_info, Record record)
 			return -1;
 		}
 
-		block_number = BF_GetBlockCounter(header_info.fileDesc) - 1;
+		block_number = BF_GetBlockCounter(header_info.fileDesc) - 1;			//Same as block_number++
 		next_block_p = block;
-		next_block_p += BLOCK_SIZE - sizeof(int);
+		next_block_p += BLOCK_SIZE - sizeof(int);					//Go to the memory where the block ID for the next block is stored
+
 
 		if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0 ) {
 			BF_PrintError("Couldn't read block");
 			return -1;
 		}
 
-		memcpy(next_block_p, &block_number, sizeof(int));															//Write the next block * to the end of the first block
+		memcpy(next_block_p, &block_number, sizeof(int));															//Write the next block ID to the end of the first block
 
 		if (BF_WriteBlock(header_info.fileDesc, block_number) < 0 ) {
 			BF_PrintError("Couldn't write block");
@@ -164,8 +165,12 @@ int HP_InsertEntry(HP_info header_info, Record record)
 	num_records_p = block;
 	num_records_p += BLOCK_SIZE - sizeof(int);
 	memcpy(&num_of_records, num_records_p, sizeof(int));						// Get the number of records
+
+
+	printf("%d NUM OF RECORDS, %d RECORD\n", num_of_records, record.id);
 	// Right before the bytes storing num_of_record resides the pointer to the next block.
 	next_block_p = num_records_p - sizeof(int);
+
 
 	// Move the pointer for insertion sizeof(Record*) times the records inserted.
 	first_available = (Record *)(block + num_of_records*sizeof(Record));
@@ -188,6 +193,10 @@ int HP_InsertEntry(HP_info header_info, Record record)
 
 	// If the block is full, allocate memory for a new one and insert the record at the beginning.
 	block_number++;
+//	memcpy(next_block_p, &block_number, sizeof(int));
+//TI 8ELW AYTI TI GRAMMI???????????
+
+
 	if (BF_AllocateBlock(header_info.fileDesc) < 0 ) {
 		BF_PrintError("Couldn't allocate block");
 		return -1;
@@ -196,6 +205,7 @@ int HP_InsertEntry(HP_info header_info, Record record)
 		BF_PrintError("Couldn't read block");
 		return -1;
 	}
+	memcpy(block, &record, sizeof(Record));
 
 	memcpy(next_block_p, &block_number, sizeof(int));
 
@@ -293,13 +303,13 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 	Record empty_record;
 
 	memset(&empty_record, 0, sizeof(Record));
-	
+
 	// First, go to block 0.
 	if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){
 		BF_PrintError("Couldn't read block");
 		return -1;
 	}
-	
+
 // 	//Then, using the index stored at the block's last bytes, go to the next block (1).
 // 	next_block_p = (int*)block;
 // 	next_block_p += BLOCK_SIZE - sizeof(int);
@@ -312,8 +322,8 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 	next_block_p = (int*)block;
 	next_block_p += BLOCK_SIZE - 2*sizeof(int);
 
-	read = (Record*)block; 
-	memcpy(&record, read, sizeof(Record));	
+	read = (Record*)block;
+	memcpy(&record, read, sizeof(Record));
 
 	//read now points to the first (key) # of bytes of the block, where the primary key value of the Record struct is stored
 	//memcpy(read, block, sizeof(Record));
@@ -353,10 +363,10 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 		}
 		return block_number;
 	}
-	
+
 	// otherwise, print only the entry of id val, if it exists
 	while (1) {
-			
+
 		if (memcmp(&record, (char[sizeof(Record)]){0}, sizeof(Record)) != 0
 		    && memcmp(&record.id, value, key_size) == 0 ){
 			//Print all the info of record with queried id
