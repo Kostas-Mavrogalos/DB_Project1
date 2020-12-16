@@ -8,7 +8,7 @@
 #define MAX_FILES 100
 #define MAX_BLOCKS 5
 
-HAHAHAHAHAHAHAHAHAHAHAHASasd
+HAHAHAHAHAHAHA\
 
 int main(int argc, char** argv) {
 	int bfs [MAX_FILES];
