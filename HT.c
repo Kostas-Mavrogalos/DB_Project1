@@ -91,12 +91,14 @@ HT_info* HT_OpenIndex(char* filename) {
 		BF_PrintError("Couldn't open file");
 	  return NULL;
 	}
-
+	
+	// Read the first block where we stored the vital data
 	if (BF_ReadBlock(fileDesc, 0, &block) < 0 ) {
 		BF_PrintError("Couldn't read file");
 		return NULL;
 	}
 
+	// Read all data from header block
 	HT_info* header_info = malloc(sizeof(HT_info));
 
 	memcpy(&(header_info->fileDesc), block, sizeof(int));
@@ -109,7 +111,9 @@ HT_info* HT_OpenIndex(char* filename) {
 	block+=strlen(block) + 1;
 
 	memcpy(&(header_info->attrLength), block, sizeof(int));
-
+	block+=sizeof(int);
+	
+	memcpy(&(header_info->numBuckets), block, sizeof(long int));
 	return header_info;
 }
 
