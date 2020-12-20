@@ -193,9 +193,6 @@ int HP_InsertEntry(HP_info header_info, Record record)
 
 	// If the block is full, allocate memory for a new one and insert the record at the beginning.
 	block_number++;
-//	memcpy(next_block_p, &block_number, sizeof(int));
-//TI 8ELW AYTI TI GRAMMI???????????
-
 
 	if (BF_AllocateBlock(header_info.fileDesc) < 0 ) {
 		BF_PrintError("Couldn't allocate block");
