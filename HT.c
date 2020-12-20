@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+int hashFunction(int numBuckets, int id){
+	// uses id to find bucket id. Return a hash_key where 0 <= hash_key < numBuckets
+}
+
 int HT_CreateIndex(char* filename, char attrType, char* attrName, int attrLength, long int numBuckets)
 {
 	BF_Init();
