@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-int hashFunction(int numBuckets, int id){
+int hashFunction(int numBuckets, void* id){
 	// uses id to find bucket id. Return a hash_key where 0 <= hash_key < numBuckets
 }
 
@@ -142,7 +142,7 @@ int HT_InsertEntry(HT_info header_info, Record record) {
 	void* first_available;
 	
 	// Use the provided hashFunction to find which bucket corresponds to the given record's id
-	bucket = hashFunction(header_info.numBuckets, Record.id) + 1;
+	bucket = hashFunction(header_info.numBuckets, &Record.id) + 1;
 	
 	// Read the block where the bucket starts
 	if (BF_ReadBlock(fileDesc, bucket, &block) < 0 ) {
@@ -227,6 +227,66 @@ int HT_InsertEntry(HT_info header_info, Record record) {
 }
 
 int HT_DeleteEntry(HT_info header_info, void* value) {
+	int block_number;
+	void* block;
+	void* next_block_p;
+	int key_size = header_info.attrLength;
+	void* record;							//To clear the Record that is to be deleted
+	Record read;
+
+	block_number = BF_GetBlockCounter(header_info.fileDesc);
+
+	if (block_number == 1) return -1;
+
+	// Go to the bucket corresponding to the hash_key of given value
+	bucket = hashFunction(header_info.numBuckets, value) + 1;
+	
+	if (BF_ReadBlock(header_info.fileDesc, bucket, &block) < 0){				//Read the block that has data
+		BF_PrintError("Couldn't read block");
+		return -1;
+	}
+
+	//next_block_p points to the next block
+	next_block_p = block;
+	next_block_p += BLOCK_SIZE - 2*sizeof(int);
+
+	//record now points to the first (key) # of bytes of the block, where the primary key value of the Record struct is stored
+	record = block;
+	memcpy(&read, (Record*)record, sizeof(Record));
+
+	while (1) {
+		printf("ID: %d\n", read.id);
+		if (memcmp(&read.id, (int*)value, key_size) == 0){
+			//Empty the value and fill it with 0's
+			Record del;
+			memset(record, 0, sizeof(Record));
+			memcpy(&read, record, sizeof(Record));
+			printf("id: %d\n", read.id);
+			BF_WriteBlock(header_info.fileDesc, block_number);
+			return 0;
+		}
+		if (next_block_p - (void*)record < sizeof(Record)) {				//For when the available space in the block isn't enough for a Record to fit
+			if (memcmp(next_block_p, (char[sizeof(int)]){0}, sizeof(int))==0) {	//If there isn't a next block
+				return -1;
+			}
+			memcpy(&block_number, next_block_p, sizeof(int));
+			if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){
+				BF_PrintError("Couldn't read block");
+				return -1;
+			}
+			record = block;
+			memcpy(&read, (Record*)record, sizeof(Record));
+
+			//if (memcmp(read.id, value, key_size) == 0) break;		//When record changes, we need to see the first Record's id, and if it's equal to value, exit the loop
+
+			next_block_p = (int*)block;
+			next_block_p += BLOCK_SIZE - 2*sizeof(int);
+		}else{
+			//If the value in that record isn't the one we are looking for, move Record # of bytes forward
+			record += sizeof(Record);
+			memcpy(&read, (Record*)record, sizeof(Record));
+		}
+	}
 
 }
 
