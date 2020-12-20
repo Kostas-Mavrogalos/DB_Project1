@@ -202,7 +202,6 @@ int HP_InsertEntry(HP_info header_info, Record record)
 		BF_PrintError("Couldn't read block");
 		return -1;
 	}
-	memcpy(block, &record, sizeof(Record));
 
 	memcpy(next_block_p, &block_number, sizeof(int));
 
