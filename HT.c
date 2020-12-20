@@ -130,6 +130,12 @@ int HT_CloseIndex(char* filename) {
 
 int HT_InsertEntry(HT_info header_info, Record record) {
 	int bucket;
+	int block_number;
+	int num_of_records;
+	void *block;
+	void *num_records_p;
+	void *next_block_p;
+	void* first_available;
 	
 	// Use the provided hashFunction to find which bucket corresponds to the given record's id
 	bucket = hashFunction(header_info.numBuckets, Record.id) + 1;
@@ -140,12 +146,7 @@ int HT_InsertEntry(HT_info header_info, Record record) {
 		return NULL;
 	}
 	
-		int block_number;
-	int num_of_records;
-	void *block;
-	void *num_records_p;
-	void *next_block_p;
-	void* first_available;
+	next_block_p = 	BLOCK_SIZE - sizeof(int);
 
 	// block_number is the index of the last block, where the insertion is attempted.
 	block_number = BF_GetBlockCounter(header_info.fileDesc) - 1;
@@ -212,9 +213,6 @@ int HT_InsertEntry(HT_info header_info, Record record) {
 
 	// If the block is full, allocate memory for a new one and insert the record at the beginning.
 	block_number++;
-//	memcpy(next_block_p, &block_number, sizeof(int));
-//TI 8ELW AYTI TI GRAMMI???????????
-
 
 	if (BF_AllocateBlock(header_info.fileDesc) < 0 ) {
 		BF_PrintError("Couldn't allocate block");
