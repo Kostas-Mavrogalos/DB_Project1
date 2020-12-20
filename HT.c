@@ -129,7 +129,16 @@ int HT_CloseIndex(char* filename) {
 }
 
 int HT_InsertEntry(HT_info header_info, Record record) {
-
+	int bucket;
+	
+	// Use the provided hashFunction to find which bucket corresponds to the given record's id
+	bucket = hashFunction(header_info.numBuckets, Record.id) + 1;
+	
+	// Read the block where the bucket starts
+	if (BF_ReadBlock(fileDesc, bucket, &block) < 0 ) {
+		BF_PrintError("Couldn't read file");
+		return NULL;
+	}
 }
 
 int HT_DeleteEntry(HT_info header_info, void* value) {
