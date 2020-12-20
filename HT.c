@@ -118,7 +118,14 @@ HT_info* HT_OpenIndex(char* filename) {
 }
 
 int HT_CloseIndex(char* filename) {
+	if (BF_CloseFile(header_info->fileDesc) < 0) {
+		BF_PrintError("Couldn't close file");
+		return -1;
+	}
 
+	free(header_info);
+
+	return 0;
 }
 
 int HT_InsertEntry(HT_info header_info, Record record) {
