@@ -7,7 +7,8 @@
 
 int HT_CreateIndex(char* filename, char attrType, char* attrName, int attrLength, long int numBuckets)
 {
-  int fileDesc;
+	BF_Init();
+	int fileDesc;
 	void *block;
 	if (attrType != 'i' && attrType != 'c'){
 		printf("Error illegal character");
@@ -83,7 +84,33 @@ int HT_CreateIndex(char* filename, char attrType, char* attrName, int attrLength
 }
 
 HT_info* HT_OpenIndex(char* filename) {
+	int fileDesc;
+	void* block;
+	
+	if ( (fileDesc = BF_OpenFile(filename)) < 0 ) {
+		BF_PrintError("Couldn't open file");
+	  return NULL;
+	}
 
+	if (BF_ReadBlock(fileDesc, 0, &block) < 0 ) {
+		BF_PrintError("Couldn't read file");
+		return NULL;
+	}
+
+	HT_info* header_info = malloc(sizeof(HT_info));
+
+	memcpy(&(header_info->fileDesc), block, sizeof(int));
+	block+=sizeof(int);
+
+	memcpy(&(header_info->attrType), block, sizeof(char));
+	block+=sizeof(char);
+
+	strcpy(header_info->attrName, block);
+	block+=strlen(block) + 1;
+
+	memcpy(&(header_info->attrLength), block, sizeof(int));
+
+	return header_info;
 }
 
 int HT_CloseIndex(char* filename) {
