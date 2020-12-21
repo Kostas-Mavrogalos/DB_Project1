@@ -13,7 +13,10 @@ int HT_CreateIndex(char* filename, char attrType, char* attrName, int attrLength
 {
 	BF_Init();
 	int fileDesc;
+	int bucket_index;
 	void *block;
+	void *hash_block;
+	void *end_of_block;
 	if (attrType != 'i' && attrType != 'c'){
 		printf("Error illegal character");
 		return -1;
@@ -54,25 +57,57 @@ int HT_CreateIndex(char* filename, char attrType, char* attrName, int attrLength
 	block += sizeof(int);
 	
 	memcpy(block, &numBuckets, sizeof(long int));
+	block += sizeof(long int);
+	
+	// Use block #1 and beyond to store the indices of the buckets.
+ 	if (BF_AllocateBlock(fileDesc) < 0 ) {
+		BF_PrintError("Couldn't allocate block");
+		return -1;
+	}
 
+ 	if (BF_ReadBlock(fileDesc, 1, &block) < 0 ) {
+		BF_PrintError("Couldn't read block");
+		return -1;
+	}
+	
 	if (BF_WriteBlock(fileDesc, 0) < 0){
 		BF_PrintError("Couldnt' write block");
 		return -1;
 	}
-
+	
+	hash_block = block;
+	end_of_block = block;
+	end_of_block += BLOCK_SIZE;
  	// From block #1 up to block #numBuckets, create the first block of each bucket
-  	for (int i=1; i <= numBuckets; i++) {
-    		if (BF_AllocateBlock(i) < 0 ) {
+  	for (int i=0; i < numBuckets; i++) {
+		bucket_index = BF_GetBlockCounter(fileDesc);
+    		if (BF_AllocateBlock(fileDesc) < 0 ) {
   			BF_PrintError("Couldn't allocate block");
   			return -1;
   		}
 
-   		if (BF_ReadBlock(i, 0, &block) < 0 ) {
+   		if (BF_ReadBlock(fileDesc, bucket_index, &block) < 0 ) {
   			BF_PrintError("Couldn't read block");
   			return -1;
   		}
+		
+		if ( (int*)end_of_block - (int*)hash_block < sizeof(int)){
+			if (BF_AllocateBlock(fileDesc) < 0 ) {
+  				BF_PrintError("Couldn't allocate block");
+  				return -1;
+  			}
 
-  		if (BF_WriteBlock(i, 0) < 0){
+   			if (BF_ReadBlock(fileDesc, BF_GetBlockCounter(fileDesc), &block) < 0 ) {
+  				BF_PrintError("Couldn't read block");
+  				return -1;
+  			}
+			hash_block = block;
+			end_of_block += BLOCK_SIZE;
+		}
+		memcpy((int*)block, &bucket_index ,sizeof(int));
+		hash_block += sizeof(int); 
+
+  		if (BF_WriteBlock(fileDesc, bucket_index) < 0){
   			BF_PrintError("Couldnt' write block");
   			return -1;
   		}
