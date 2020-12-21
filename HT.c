@@ -179,6 +179,7 @@ int HT_CloseIndex(HT_info *header_info) {
 
 int HT_InsertEntry(HT_info header_info, Record record) {
 	int bucket;
+	int bucket_index;
 	int block_number;
 	int num_of_records;
 	void *block;
@@ -187,20 +188,73 @@ int HT_InsertEntry(HT_info header_info, Record record) {
 	void* first_available;
 	
 	// Use the provided hashFunction to find which bucket corresponds to the given record's id
-	bucket = hashFunction(header_info.numBuckets, &Record.id) + 1;
+	bucket = hashFunction(header_info.numBuckets, &Record.id);
 	
 	// Read the block where the bucket starts
-	if (BF_ReadBlock(fileDesc, bucket, &block) < 0 ) {
+	if (BF_ReadBlock(fileDesc, 0, &block) < 0 ) {
 		BF_PrintError("Couldn't read file");
 		return NULL;
 	}
 	
 	next_block_p = block;
+	next_block_p += BLOCK_SIZE - sizeof(int);
+	memcpy(&block_number, (int*)next_block_p, sizeof(int));
+	
+	// Read block #1 where the bucket indexes start
+	if (BF_ReadBlock(fileDesc, block_number, &block) < 0 ) {
+		BF_PrintError("Couldn't read file");
+		return NULL;
+	}
+	
+	bucket_index = bucket;
+	while(bucket_index >= (BLOCK_SIZE - sizeof(int))/4)
+	{
+		bucket_index -= (BLOCK_SIZE - sizeof(int))/4;
+		memcpy(&block_number, (int*)next_block_p, sizeof(int));
+		
+		if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){
+			BF_PrintError("Couldn't read block");
+			return -1;
+		}
+		next_block_p = block;
+		next_block_p += BLOCK_SIZE - sizeof(int);
+	}
+	
+	next_block_p = block;
+	next_block_p += bucket_index*sizeof(int);
+	
+	if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){
+		BF_PrintError("Couldn't read block");
+		return -1;
+	}
+	
+	next_block_p = block;
 	next_block_p += BLOCK_SIZE - 2*sizeof(int);
 	
-	// Go to the last block of this bucket for insertion
-	while (memcmp(next_block_p, (char[sizeof(int)]){0}, sizeof(int) ) != 0){
-		
+	num_records_p = block;
+	num_records_p += BLOCK_SIZE - sizeof(int);
+	memcpy(&num_of_records, (int*)num_records_p, sizeof(int));
+	
+	while (num_of_records ==  (BLOCK_SIZE - 2*sizeof(int))/sizeof(Record))
+	{
+		if (memcmp(next_block_p, (char[sizeof(int)]){0}, sizeof(int) ) == 0){
+			if (BF_AllocateBlock(header_info.fileDesc) < 0 ) {
+				BF_PrintError("Couldn't allocate block");
+				return -1;
+			}
+			block_number = BF_GetBlockCounter(header_info.fileDesc)-1
+			if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){
+				BF_PrintError("Couldn't read block");
+				return -1;
+			}
+			
+			memcpy((int*)next_block_p, &block_number, sizeof(int));
+			
+			if (BF_WriteBlock(header_info.fileDesc, block_number) < 0){
+				BF_PrintError("Couldn't read block");
+				return -1;
+			}
+		}
 		memcpy(&block_number, next_block_p, sizeof(int));
 		if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){
 			BF_PrintError("Couldn't read block");
@@ -208,67 +262,25 @@ int HT_InsertEntry(HT_info header_info, Record record) {
 		}
 		next_block_p = block;
 		next_block_p += BLOCK_SIZE - 2*sizeof(int);
+	}
+	
+	first_available = (Record*)block;
+	// Go to the last block of this bucket for insertion
+	while (memcmp(first_available, (char[sizeof(Record)]){0}, sizeof(Record) ) != 0){
+		
+		first_available += sizeof(Record);
 		
 	}
-
-	// Go to the last 4 bytes and retrieve the number of records
-	num_records_p = block;
-	num_records_p += BLOCK_SIZE - sizeof(int);
-	memcpy(&num_of_records, num_records_p, sizeof(int));						// Get the number of records
-
-
-	printf("%d NUM OF RECORDS, %d RECORD\n", num_of_records, record.id);
-	// Right before the bytes storing num_of_record resides the pointer to the next block.
-	next_block_p = num_records_p - sizeof(int);
-
-
-	// Move the pointer for insertion sizeof(Record*) times the records inserted.
-	first_available = (Record *)(block + num_of_records*sizeof(Record));
-
-	// If there is enough space in this block, store the record.
-	if ((void*)next_block_p - (void *)first_available >= sizeof(Record)) {
-		memcpy(first_available, &record, sizeof(Record));
-
-		num_of_records++;
-		printf("%d records in block# %d for id %d\n",num_of_records, block_number, record.id);
-		memcpy(num_records_p, &num_of_records, sizeof(int));
-
-		if (BF_WriteBlock(header_info.fileDesc, block_number) < 0 ) {
-			BF_PrintError("Couldn't write block");
-			return -1;
-		}
-
-		return block_number;
-	}
-
-	// If the block is full, allocate memory for a new one and insert the record at the beginning.
-	block_number = BF_GetBlockCounter(header_info.fileDesc);
-
-	if (BF_AllocateBlock(header_info.fileDesc) < 0 ) {
-		BF_PrintError("Couldn't allocate block");
-		return -1;
-	}
-	if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0 ) {
-		BF_PrintError("Couldn't read block");
-		return -1;
-	}
-
-	memcpy(next_block_p, &block_number, sizeof(int));
 	
-	num_records_p = block;
-	num_records_p += BLOCK_SIZE - sizeof(int);
+	memcpy((Record*)first_available, &record, sizeof(Record));
 	
-	memcpy((Record*)block, &record, sizeof(Record));
-	num_of_records = 1;
-	memcpy(num_records_p, &num_of_records, sizeof(int));
-
-	printf("%d records in block# %d for id %d\n",num_of_records, block_number, record.id);
 	if (BF_WriteBlock(header_info.fileDesc, block_number) < 0 ) {
 		BF_PrintError("Couldn't write block");
 		return -1;
 	}
-
-	return block_number;
+	
+	return bucket;
+	
 }
 
 int HT_DeleteEntry(HT_info header_info, void* value) {
