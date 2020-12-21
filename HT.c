@@ -14,6 +14,7 @@ int HT_CreateIndex(char* filename, char attrType, char* attrName, int attrLength
 	BF_Init();
 	int fileDesc;
 	int bucket_index;
+	int next_block;
 	void *block;
 	void *hash_block;
 	void *end_of_block;
@@ -42,6 +43,9 @@ int HT_CreateIndex(char* filename, char attrType, char* attrName, int attrLength
 		BF_PrintError("Couldn't read block");
 		return -1;
 	}
+	
+	end_of_block = block;
+	end_of_block += BLOCK_SIZE - sizeof(int);
 	
 	// Store all necessary data for HT_info which is initialized later
 	memcpy(block, &fileDesc, sizeof(int));
@@ -75,17 +79,21 @@ int HT_CreateIndex(char* filename, char attrType, char* attrName, int attrLength
 		return -1;
 	}
 	
+	next_block = 1;
+	memcpy(end_of_block, &next_block, sizeof(int)); 
+	
 	hash_block = block;
 	end_of_block = block;
-	end_of_block += BLOCK_SIZE;
+	end_of_block += BLOCK_SIZE - sizeof(int);
  	// From block #1 up to block #numBuckets, create the first block of each bucket
   	for (int i=0; i < numBuckets; i++) {
-		bucket_index = BF_GetBlockCounter(fileDesc);
+		
     		if (BF_AllocateBlock(fileDesc) < 0 ) {
   			BF_PrintError("Couldn't allocate block");
   			return -1;
   		}
-
+		
+		bucket_index = BF_GetBlockCounter(fileDesc)-1;
    		if (BF_ReadBlock(fileDesc, bucket_index, &block) < 0 ) {
   			BF_PrintError("Couldn't read block");
   			return -1;
@@ -96,15 +104,17 @@ int HT_CreateIndex(char* filename, char attrType, char* attrName, int attrLength
   				BF_PrintError("Couldn't allocate block");
   				return -1;
   			}
-
-   			if (BF_ReadBlock(fileDesc, BF_GetBlockCounter(fileDesc), &block) < 0 ) {
+			bucket_index = BF_GetBlockCounter(fileDesc) - 1;
+   			if (BF_ReadBlock(fileDesc, bucket_index, &block) < 0 ) {
   				BF_PrintError("Couldn't read block");
   				return -1;
   			}
 			hash_block = block;
-			end_of_block += BLOCK_SIZE;
+			memcpy((int*)end_of_block, &bucket_index, sizeof(int));
+			end_of_block = block;
+			end_of_block += BLOCK_SIZE - sizeof(int);
 		}
-		memcpy((int*)block, &bucket_index ,sizeof(int));
+		memcpy((int*)hash_block, &bucket_index ,sizeof(int));
 		hash_block += sizeof(int); 
 
   		if (BF_WriteBlock(fileDesc, bucket_index) < 0){
@@ -156,7 +166,7 @@ HT_info* HT_OpenIndex(char* filename) {
 	return header_info;
 }
 
-int HT_CloseIndex(char* filename) {
+int HT_CloseIndex(HT_info *header_info) {
 	if (BF_CloseFile(header_info->fileDesc) < 0) {
 		BF_PrintError("Couldn't close file");
 		return -1;
