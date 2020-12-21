@@ -20,6 +20,7 @@ int HT_CreateIndex(char* filename, char attrType, char* attrName, int attrLength
 	int fileDesc;
 	int bucket_index;
 	int next_block;
+	int curr_block;
 	void *block;
 	void *hash_block;
 	void *end_of_block;
@@ -87,53 +88,62 @@ int HT_CreateIndex(char* filename, char attrType, char* attrName, int attrLength
 		return -1;
 	}
 
-
+	curr_block = 1;			// curr_block holds the pointer of the block where bucket indices are stored.
 	hash_block = block;
 	end_of_block = block;
 	end_of_block += BLOCK_SIZE - sizeof(int);
  	// From block #1 up to block #numBuckets, create the first block of each bucket
   	for (int i=0; i < numBuckets; i++) {
 
-    	if (BF_AllocateBlock(fileDesc) < 0 ) {
-  			BF_PrintError("Couldn't allocate block");
-  			return -1;
-  		}
-
-			bucket_index = BF_GetBlockCounter(fileDesc)-1;
-   		if (BF_ReadBlock(fileDesc, bucket_index, &block) < 0 ) {
-  			BF_PrintError("Couldn't read block");
-  			return -1;
-  		}
-
-			if ( end_of_block == hash_block ) {
-				if (BF_AllocateBlock(fileDesc) < 0 ) {
+		
+		// if curr_block has no more space for indices, allocate a new block and use the last 4 bytes of curr_block to store the pointer
+		if ( end_of_block == hash_block ) {
+			
+			if (BF_AllocateBlock(fileDesc) < 0 ) {
   				BF_PrintError("Couldn't allocate block");
   				return -1;
   			}
-				bucket_index = BF_GetBlockCounter(fileDesc) - 1;
+			
+			bucket_index = BF_GetBlockCounter(fileDesc) - 1;
    			if (BF_ReadBlock(fileDesc, bucket_index, &block) < 0 ) {
   				BF_PrintError("Couldn't read block");
   				return -1;
   			}
-				hash_block = block;
-				memcpy((int*)end_of_block, &bucket_index, sizeof(int));
-				end_of_block = block;
-				end_of_block += BLOCK_SIZE - sizeof(int);
-			}
-			memcpy((int*)hash_block, &bucket_index ,sizeof(int));
-			hash_block += sizeof(int);
-
-  		if (BF_WriteBlock(fileDesc, bucket_index) < 0){
-  			BF_PrintError("Couldnt' write block");
+			
+			hash_block = block;
+			memcpy((int*)end_of_block, &bucket_index, sizeof(int));
+			if (BF_WriteBlock(fileDesc, curr_block) < 0){
+  				BF_PrintError("Couldnt' write block");
+  				return -1;
+  			}
+			curr_block = bucket_index;
+			
+			end_of_block = block;
+			end_of_block += BLOCK_SIZE - sizeof(int);
+		}
+		
+		// create bucket and store index of its corresponding block
+    		if (BF_AllocateBlock(fileDesc) < 0 ) {
+  			BF_PrintError("Couldn't allocate block");
   			return -1;
   		}
 
+		bucket_index = BF_GetBlockCounter(fileDesc)-1;
+		
+		if (BF_WriteBlock(fileDesc, bucket_index) < 0){
+  			BF_PrintError("Couldnt' write block");
+  			return -1;
+  		}	
+		
+		memcpy((int*)hash_block, &bucket_index ,sizeof(int));
+		hash_block += sizeof(int);
+
   	}
 
-	if (BF_CloseFile(fileDesc)< 0 ) {
-		BF_PrintError("Couldn't close file");
-		return -1;
-	}
+// 	if (BF_CloseFile(fileDesc)< 0 ) {
+// 		BF_PrintError("Couldn't close file");
+// 		return -1;
+// 	}
 
 	return 0;
 }
