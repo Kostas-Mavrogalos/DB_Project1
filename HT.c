@@ -95,21 +95,21 @@ int HT_CreateIndex(char* filename, char attrType, char* attrName, int attrLength
  	// From block #1 up to block #numBuckets, create the first block of each bucket
   	for (int i=0; i < numBuckets; i++) {
 
-		
+
 		// if curr_block has no more space for indices, allocate a new block and use the last 4 bytes of curr_block to store the pointer
-		if ( end_of_block == hash_block ) {
-			
+		if ( end_of_block - hash_block == sizeof(int)) {
+
 			if (BF_AllocateBlock(fileDesc) < 0 ) {
   				BF_PrintError("Couldn't allocate block");
   				return -1;
   			}
-			
+
 			bucket_index = BF_GetBlockCounter(fileDesc) - 1;
    			if (BF_ReadBlock(fileDesc, bucket_index, &block) < 0 ) {
   				BF_PrintError("Couldn't read block");
   				return -1;
   			}
-			
+
 			hash_block = block;
 			memcpy((int*)end_of_block, &bucket_index, sizeof(int));
 			if (BF_WriteBlock(fileDesc, curr_block) < 0){
@@ -117,11 +117,11 @@ int HT_CreateIndex(char* filename, char attrType, char* attrName, int attrLength
   				return -1;
   			}
 			curr_block = bucket_index;
-			
+
 			end_of_block = block;
 			end_of_block += BLOCK_SIZE - sizeof(int);
 		}
-		
+
 		// create bucket and store index of its corresponding block
     		if (BF_AllocateBlock(fileDesc) < 0 ) {
   			BF_PrintError("Couldn't allocate block");
@@ -129,21 +129,11 @@ int HT_CreateIndex(char* filename, char attrType, char* attrName, int attrLength
   		}
 
 		bucket_index = BF_GetBlockCounter(fileDesc)-1;
-		
-		if (BF_WriteBlock(fileDesc, bucket_index) < 0){
-  			BF_PrintError("Couldnt' write block");
-  			return -1;
-  		}	
-		
+
 		memcpy((int*)hash_block, &bucket_index ,sizeof(int));
 		hash_block += sizeof(int);
 
   	}
-
-// 	if (BF_CloseFile(fileDesc)< 0 ) {
-// 		BF_PrintError("Couldn't close file");
-// 		return -1;
-// 	}
 
 	return 0;
 }
@@ -206,7 +196,7 @@ int HT_InsertEntry(HT_info header_info, Record record) {
 
 	// Use the provided hashFunction to find which bucket corresponds to the given record's id
 	bucket = hashFunction(header_info.numBuckets, &(record.id));
-	printf("%d BUCKET\n", bucket);
+
 	// Read the block where the bucket starts
 	if (BF_ReadBlock(header_info.fileDesc, 0, &block) < 0 ) {
 		BF_PrintError("Couldn't read file");
@@ -239,11 +229,13 @@ int HT_InsertEntry(HT_info header_info, Record record) {
 
 	next_block_p = block;
 	next_block_p += bucket_index*sizeof(int);
+	memcpy(&block_number, (int*)next_block_p, sizeof(int));
 
 	if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){
 		BF_PrintError("Couldn't read block");
 		return -1;
 	}
+
 
 	next_block_p = block;
 	next_block_p += BLOCK_SIZE - 2*sizeof(int);
@@ -255,6 +247,7 @@ int HT_InsertEntry(HT_info header_info, Record record) {
 	while (num_of_records ==  (BLOCK_SIZE - 2*sizeof(int))/sizeof(Record))
 	{
 		if (memcmp(next_block_p, (char[sizeof(int)]){0}, sizeof(int) ) == 0){
+
 			if (BF_AllocateBlock(header_info.fileDesc) < 0 ) {
 				BF_PrintError("Couldn't allocate block");
 				return -1;
@@ -279,17 +272,26 @@ int HT_InsertEntry(HT_info header_info, Record record) {
 		}
 		next_block_p = block;
 		next_block_p += BLOCK_SIZE - 2*sizeof(int);
+		num_records_p = block;
+		num_records_p += BLOCK_SIZE - sizeof(int);
+		memcpy(&num_of_records, (int*)num_records_p, sizeof(int));
 	}
 
 	first_available = (Record*)block;
-	// Go to the last block of this bucket for insertion
+	// Go to the first available spot for insertion
 	while (memcmp(first_available, (char[sizeof(Record)]){0}, sizeof(Record) ) != 0){
 
 		first_available += sizeof(Record);
 
 	}
 
+	if (record.id == 500) printf("%d huehuehue\n", block_number);
+
 	memcpy((Record*)first_available, &record, sizeof(Record));
+
+	memcpy(&num_of_records, num_records_p, sizeof(int));
+	num_of_records++;
+	memcpy(num_records_p, &num_of_records, sizeof(int));
 
 	if (BF_WriteBlock(header_info.fileDesc, block_number) < 0 ) {
 		BF_PrintError("Couldn't write block");
@@ -345,6 +347,7 @@ int HT_DeleteEntry(HT_info header_info, void* value) {
 
 	next_block_p = block;
 	next_block_p += bucket_index*sizeof(int);
+	memcpy(&block_number, (int*)next_block_p, sizeof(int));
 
 	if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){
 		BF_PrintError("Couldn't read block");
@@ -360,12 +363,11 @@ int HT_DeleteEntry(HT_info header_info, void* value) {
 	memcpy(&read, (Record*)record, sizeof(Record));
 
 	while (1) {
-		printf("ID: %d\n", read.id);
-		if (memcmp(&read.id, (int*)value, key_size) == 0){
+		if (memcmp(&(read.id), (int*)value, key_size) == 0){
 			//Empty the value and fill it with 0's
 			memset(record, 0, sizeof(Record));
-			memcpy(&read, record, sizeof(Record));
-			printf("id: %d\n", read.id);
+			memcpy(&read, (Record*)record, sizeof(Record));\
+
 			if (BF_WriteBlock(header_info.fileDesc, block_number) < 0 ) {
 				BF_PrintError("Couldn't write block");
 				return -1;
@@ -392,7 +394,6 @@ int HT_DeleteEntry(HT_info header_info, void* value) {
 			memcpy(&read, (Record*)record, sizeof(Record));
 		}
 	}
-
 }
 
 int HT_GetAllEntries(HT_info header_info, void* value) {
@@ -402,14 +403,15 @@ int HT_GetAllEntries(HT_info header_info, void* value) {
 	int block_number;
 	int bucket_index;
 	int key_size = header_info.attrLength;
+	int records;
 	void* block;
 	void* hash_block;
 	void* next_block_p;
 	void* end_of_block;
+	void *num_records_p;
 	void* read;
 	Record record;
 
-	bucket = hashFunction(header_info.numBuckets, value);
 
 	// Read the block where the bucket starts
 	if (BF_ReadBlock(header_info.fileDesc, 0, &block) < 0 ) {
@@ -420,25 +422,29 @@ int HT_GetAllEntries(HT_info header_info, void* value) {
 	next_block_p = block;
 	next_block_p += BLOCK_SIZE - sizeof(int);
 	memcpy(&block_number, (int*)next_block_p, sizeof(int));
-
 	// Read block #1 where the bucket indexes start
 	if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0 ) {
 		BF_PrintError("Couldn't read file");
 		return -1;
 	}
 
-	bucket_index = bucket;
+
 	end_of_block = block;
 	end_of_block += BLOCK_SIZE - sizeof(int);
 	//Print all values
 	if(value == NULL) {
 		hash_block = block;
-		memcpy(&block_number, hash_block, sizeof(int));
 		for (int i=0;  i<header_info.numBuckets; i++) {
+			memcpy(&block_number, hash_block, sizeof(int));
 			if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0 ) {
 				BF_PrintError("Couldn't read file");
 				return -1;
 			}
+			next_block_p = block;
+			next_block_p += BLOCK_SIZE - 2*sizeof(int);
+			num_records_p = block;
+			num_records_p += BLOCK_SIZE - sizeof(int);
+			memcpy(&records, num_records_p, sizeof(int));
 			num_of_blocks++;
 			read = (Record*)block;
 			memcpy(&record, block, sizeof(Record));
@@ -456,6 +462,7 @@ int HT_GetAllEntries(HT_info header_info, void* value) {
 				read += sizeof(Record);
 				// If the end of a block is reached, move the block pointer to the next block, if there is one
 				if ((void*)next_block_p - (void*)read < sizeof(Record)) {
+					printf("\n");
 					// If end of bucket reached, go to the next one
 					if (memcmp(next_block_p, (char[sizeof(int)]){0}, sizeof(int) ) == 0) {
 						break;
@@ -490,6 +497,8 @@ int HT_GetAllEntries(HT_info header_info, void* value) {
 		return num_of_blocks;
 	}
 
+bucket = hashFunction(header_info.numBuckets, value);
+bucket_index = bucket;
 
 	//Print one value, the one with id == value
 	while(bucket_index >= (BLOCK_SIZE - sizeof(int))/4)
@@ -505,22 +514,25 @@ int HT_GetAllEntries(HT_info header_info, void* value) {
 		next_block_p = block;
 		next_block_p += BLOCK_SIZE - sizeof(int);
 	}
-
 	next_block_p = block;
 	next_block_p += bucket_index*sizeof(int);
+
+	memcpy(&block_number, (int*)next_block_p, sizeof(int));
 
 	if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){
 		BF_PrintError("Couldn't read block");
 		return -1;
 	}
+	num_of_blocks++;
 
 	//next_block_p points to the next block
 	next_block_p = block;
-	next_block_p += BLOCK_SIZE - sizeof(int);
+	next_block_p += BLOCK_SIZE - 2*sizeof(int);
+	read = block;
+	memcpy(&record, read, sizeof(Record));
 
 	while (1) {
-
-		if (memcmp(&record, (char[sizeof(Record)]){0}, sizeof(Record)) != 0 && memcmp(&record.id, value, key_size) == 0) {
+		if (memcmp(&record, (char[sizeof(Record)]){0}, sizeof(Record)) != 0 && memcmp(&(record.id), value, key_size) == 0) {
 			//Print all the info of record with queried id
 			printf("Found record with id: %d\n", record.id);
 			printf("This record's name is: %s\n", record.name);
