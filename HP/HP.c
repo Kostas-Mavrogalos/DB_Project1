@@ -294,7 +294,6 @@ int HP_DeleteEntry(HP_info header_info, void *value)
 int HP_GetAllEntries(HP_info header_info, void *value)
 {
 	int block_number = 1;
-	int all;														//pseudo-boolean integer to know if we will print all or 1 Entry
 	void* block;
 	void* next_block_p;
 	int key_size = header_info.attrLength;
@@ -399,5 +398,5 @@ int HP_GetAllEntries(HP_info header_info, void *value)
 		}
 		memcpy(&record, read, sizeof(Record));
 
-		}
+	}
 }
