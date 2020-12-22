@@ -97,7 +97,7 @@ int HT_CreateIndex(char* filename, char attrType, char* attrName, int attrLength
 
 
 		// if curr_block has no more space for indices, allocate a new block and use the last 4 bytes of curr_block to store the pointer
-		if ( end_of_block - hash_block == sizeof(int)) {
+		if ( end_of_block - hash_block < sizeof(int)) {
 
 			if (BF_AllocateBlock(fileDesc) < 0 ) {
   				BF_PrintError("Couldn't allocate block");
