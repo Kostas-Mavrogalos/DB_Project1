@@ -405,6 +405,7 @@ int HT_GetAllEntries(HT_info header_info, void* value) {
 	int bucket;
 	int block_number;
 	int bucket_index;
+	int curr_block;
 	int key_size = header_info.attrLength;
 	int records;
 	void* block;
@@ -430,7 +431,8 @@ int HT_GetAllEntries(HT_info header_info, void* value) {
 		BF_PrintError("Couldn't read file");
 		return -1;
 	}
-
+	
+	curr_block = block_number;
 
 	end_of_block = block;
 	end_of_block += BLOCK_SIZE - sizeof(int);
@@ -488,7 +490,7 @@ int HT_GetAllEntries(HT_info header_info, void* value) {
 			}
 			
 			index++;
-			if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0) {
+			if (BF_ReadBlock(header_info.fileDesc, curr_block, &block) < 0) {
 				BF_PrintError("Couldn't read block for bucket index 2");
 				return -1;
 			}
@@ -503,6 +505,7 @@ int HT_GetAllEntries(HT_info header_info, void* value) {
 					BF_PrintError("Couldn't read block for bucket index 2");
 					return -1;
 				}
+				curr_block = block_number;
 				hash_block = block;
 				end_of_block = block;
 				end_of_block += BLOCK_SIZE - sizeof(int);
