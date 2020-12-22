@@ -440,7 +440,7 @@ int HT_GetAllEntries(HT_info header_info, void* value) {
 		for (int i=0;  i<header_info.numBuckets; i++) {
 			memcpy(&block_number, hash_block, sizeof(int));
 			if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0 ) {
-				BF_PrintError("Couldn't read file");
+				BF_PrintError("Couldn't read file for bucket index");
 				return -1;
 			}
 			next_block_p = block;
@@ -472,7 +472,7 @@ int HT_GetAllEntries(HT_info header_info, void* value) {
 					}
 					memcpy(&block_number, next_block_p, sizeof(int));
 					if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0) {
-						BF_PrintError("Couldn't read block");
+						BF_PrintError("Couldn't read block (trying to visit next block)");
 						return -1;
 					}
 					num_of_blocks++;
@@ -489,7 +489,7 @@ int HT_GetAllEntries(HT_info header_info, void* value) {
 			if (end_of_block - hash_block < sizeof(int)) {
 				memcpy(&block_number, end_of_block, sizeof(int));
 				if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0) {
-					BF_PrintError("Couldn't read block");
+					BF_PrintError("Couldn't read block for bucket index");
 					return -1;
 				}
 				hash_block = block;
