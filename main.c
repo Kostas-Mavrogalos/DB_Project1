@@ -37,6 +37,11 @@ int main () {
 
   printf("----------------------------------\n");
 
+BF_ReadBlock(header_info->fileDesc, 1, block);
+block += 2*sizeof(int);
+memcpy(&dick, block, sizeof(int));
+printf("dick = %d\n\n\n", dick);
+	
   int* ick = NULL;
   printf("%d\n", HT_GetAllEntries(*header_info, ick));
 }
