@@ -231,6 +231,7 @@ int HT_InsertEntry(HT_info header_info, Record record) {
 	next_block_p += bucket_index*sizeof(int);
 	memcpy(&block_number, (int*)next_block_p, sizeof(int));
 
+	// read the first block of the bucket where the new entry belongs
 	if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){
 		BF_PrintError("Couldn't read block");
 		return -1;
@@ -244,6 +245,7 @@ int HT_InsertEntry(HT_info header_info, Record record) {
 	num_records_p += BLOCK_SIZE - sizeof(int);
 	memcpy(&num_of_records, (int*)num_records_p, sizeof(int));
 
+	// the following condition checks whether the block is already full
 	while (num_of_records ==  (BLOCK_SIZE - 2*sizeof(int))/sizeof(Record))
 	{
 		if (memcmp(next_block_p, (char[sizeof(int)]){0}, sizeof(int) ) == 0){
@@ -252,6 +254,7 @@ int HT_InsertEntry(HT_info header_info, Record record) {
 				BF_PrintError("Couldn't allocate block");
 				return -1;
 			}
+			int prev_block = block_number;
 			block_number = BF_GetBlockCounter(header_info.fileDesc)-1;
 			if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){
 				BF_PrintError("Couldn't read block");
@@ -260,7 +263,7 @@ int HT_InsertEntry(HT_info header_info, Record record) {
 
 			memcpy((int*)next_block_p, &block_number, sizeof(int));
 
-			if (BF_WriteBlock(header_info.fileDesc, block_number) < 0){
+			if (BF_WriteBlock(header_info.fileDesc, prev_block) < 0){
 				BF_PrintError("Couldn't read block");
 				return -1;
 			}
