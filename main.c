@@ -38,7 +38,7 @@ int main () {
   printf("----------------------------------\n");
 
 BF_ReadBlock(header_info->fileDesc, 1, block);
-block += 3*sizeof(int);
+block += sizeof(int);
 memcpy(&dick, block, sizeof(int));
 printf("dick = %d\n\n\n", dick);
 	
