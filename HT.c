@@ -438,7 +438,7 @@ int HT_GetAllEntries(HT_info header_info, void* value) {
 	if(value == NULL) {
 		hash_block = block;
 		for (int i=0;  i<header_info.numBuckets; i++) {
-			memcpy(&block_number, hash_block, sizeof(int));
+			memcpy(&block_number, (int*)hash_block, sizeof(int));
 			printf("Going to bucket %d \n", block_number);
 			if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0 ) {
 				BF_PrintError("Couldn't read file for bucket index 1");
