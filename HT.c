@@ -436,7 +436,7 @@ int HT_GetAllEntries(HT_info header_info, void* value) {
 	end_of_block += BLOCK_SIZE - sizeof(int);
 	//Print all values
 	if(value == NULL) {
-		hash_block = block;
+		hash_block = (int*)block;
 		for (int i=0;  i<header_info.numBuckets; i++) {
 			memcpy(&block_number, hash_block, sizeof(int));
 			printf("Going to bucket %d \n", block_number);
