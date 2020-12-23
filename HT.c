@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 int hashFunction(long int numBuckets, void* id){
 	// uses id to find bucket id. Return a hash_key where 0 <= hash_key < numBuckets
@@ -65,7 +66,7 @@ int HT_CreateIndex(char* filename, char attrType, char* attrName, int attrLength
 
 	memcpy(block, &attrLength, sizeof(int));
 	block += sizeof(int);
-
+													//Line intentionally left blank
 	memcpy(block, &numBuckets, sizeof(long int));
 
 	// Use block #1 and beyond to store the indices of the buckets.
@@ -288,8 +289,6 @@ int HT_InsertEntry(HT_info header_info, Record record) {
 
 	}
 
-	if (record.id == 500) printf("%d huehuehue\n", block_number);
-
 	memcpy((Record*)first_available, &record, sizeof(Record));
 
 	memcpy(&num_of_records, num_records_p, sizeof(int));
@@ -416,7 +415,7 @@ int HT_GetAllEntries(HT_info header_info, void* value) {
 	void* read;
 	Record record;
 
-
+														//Line intentionally left blank
 	// Read the block where the bucket starts
 	if (BF_ReadBlock(header_info.fileDesc, 0, &block) < 0 ) {
 		BF_PrintError("Couldn't read file");
@@ -431,7 +430,7 @@ int HT_GetAllEntries(HT_info header_info, void* value) {
 		BF_PrintError("Couldn't read file");
 		return -1;
 	}
-	
+
 	curr_block = block_number;
 
 	end_of_block = block;
@@ -442,7 +441,6 @@ int HT_GetAllEntries(HT_info header_info, void* value) {
 		hash_block = block;
 		for (int i=0;  i<header_info.numBuckets; i++) {
 			memcpy(&block_number, (int*)hash_block, sizeof(int));
-			printf("Going to bucket %d \n", block_number);
 			if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0 ) {
 				BF_PrintError("Couldn't read file for bucket index 1");
 				return -1;
@@ -488,7 +486,7 @@ int HT_GetAllEntries(HT_info header_info, void* value) {
 				}
 				memcpy(&record, read, sizeof(Record));
 			}
-			
+
 			index++;
 			if (BF_ReadBlock(header_info.fileDesc, curr_block, &block) < 0) {
 				BF_PrintError("Couldn't read block for bucket index 2");
@@ -498,7 +496,7 @@ int HT_GetAllEntries(HT_info header_info, void* value) {
 			hash_block += index*sizeof(int);
 			end_of_block = block;
 			end_of_block += BLOCK_SIZE - sizeof(int);
-			
+
 			if (end_of_block - hash_block < sizeof(int)) {
 				memcpy(&block_number, end_of_block, sizeof(int));
 				if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0) {
@@ -584,6 +582,114 @@ bucket_index = bucket;
 	}
 }
 
-int HashStatistic(char* filename) {
+int HashStatistics(char* filename) {
 
+	int min = INT_MAX, max = 0;
+	long int local_sum, total_sum = 0, block_count = 0;
+	int block_number;
+	int record_count;
+	int index_blocks = 1;						//To do BF_GetBlockCounter - index_blocks - header block to get the # of blocks with records
+	int index = 0;
+	int curr_block;
+	HT_info* header_info;
+	void* block;
+	void* num_records_p;
+	void* next_block_p;
+	void* hash_block;
+	void* end_of_block;
+
+	header_info = HT_OpenIndex(filename);
+
+	// Read the block where the bucket starts
+	if (BF_ReadBlock(header_info->fileDesc, 0, &block) < 0 ) {
+		BF_PrintError("Couldn't read file");
+		return -1;
+	}
+
+	next_block_p = block;
+	next_block_p += BLOCK_SIZE - sizeof(int);
+	hash_block = block;
+	memcpy(&block_number, (int*)next_block_p, sizeof(int));
+	// Read block #1 where the bucket indexes start
+	if (BF_ReadBlock(header_info->fileDesc, block_number, &block) < 0 ) {
+		BF_PrintError("Couldn't read file");
+		return -1;
+	}
+
+	curr_block = block_number;
+
+	printf("This file has %d blocks inside\n", BF_GetBlockCounter(header_info->fileDesc));
+	int overflow_blocks;
+
+	for (int i = 0; i<header_info->numBuckets; i++) {
+		overflow_blocks = 0;
+		local_sum = 0;
+		memcpy(&block_number, (int*)hash_block, sizeof(int));
+		if (BF_ReadBlock(header_info->fileDesc, block_number, &block) < 0 ) {
+			BF_PrintError("Couldn't read file for bucket index 1");
+			return -1;
+		}
+		num_records_p = block;
+		num_records_p += BLOCK_SIZE - sizeof(int);
+		memcpy(&record_count, num_records_p, sizeof(int));
+		local_sum += record_count;
+		memcpy(&record_count, block, sizeof(int));
+
+		while (memcmp(next_block_p, (char[sizeof(int)]){0}, sizeof(int) ) != 0) {
+			num_records_p = block;
+			num_records_p += BLOCK_SIZE - sizeof(int);
+			memcpy(&record_count, num_records_p, sizeof(int));
+			local_sum += record_count;
+			memcpy(&block_number, next_block_p, sizeof(int));
+			if (BF_ReadBlock(header_info->fileDesc, block_number, &block) < 0 ) {
+				BF_PrintError("Couldn't read file for bucket index 1");
+				return -1;
+			}
+			next_block_p = block;
+			next_block_p += BLOCK_SIZE - 2*sizeof(int);
+
+			overflow_blocks++;
+		}
+
+		if (overflow_blocks > 1) {
+			printf("Found bucket number %d with overflow blocks, totalling: %d blocks\n", i, overflow_blocks);
+		}
+
+		if (local_sum < min) min = local_sum;
+		if (local_sum > max) max = local_sum;
+		total_sum += local_sum;
+		index++;
+		if (BF_ReadBlock(header_info->fileDesc, curr_block, &block) < 0) {
+			BF_PrintError("Couldn't read block for bucket index 2");
+			return -1;
+		}
+
+		hash_block = block;
+		hash_block += index*sizeof(int);
+		end_of_block = block;
+		end_of_block += BLOCK_SIZE - sizeof(int);
+
+
+								//Line intentionally left blank
+
+		if (end_of_block - hash_block < sizeof(int)) {
+			memcpy(&block_number, end_of_block, sizeof(int));
+			if (BF_ReadBlock(header_info->fileDesc, block_number, &block) < 0) {
+				BF_PrintError("Couldn't read block for bucket index 2");
+				return -1;
+			}
+			curr_block = block_number;
+			hash_block = block;
+			end_of_block = block;
+			end_of_block += BLOCK_SIZE - sizeof(int);
+			index = 0;
+			index_blocks++;
+		}
+	}
+
+	printf("The maximum number of records in the file were: %d\n", max);
+	printf("The minimum number of records in the file were: %d\n", min);
+	printf("The mean number of records in the file were: %lf\n", (double)total_sum/header_info->numBuckets);
+
+	printf("The mean number of blocks with records is: %d\n", BF_GetBlockCounter(header_info->fileDesc) - index_blocks - 1); //The -1 is the header block
 }
