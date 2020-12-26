@@ -35,10 +35,7 @@ HT_CreateIndex(filename, 'i', "DDA", 4, 10);
   }
 
   HT_GetAllEntries(*header_info, NULL);
-  // printf("Found record with id: %d\n", record.id);
-  // printf("This record's name is: %s\n", record.name);
-  // printf("This record's surname is: %s\n", record.surname);
-  // printf("This record's address is: %s\n", record.address);
+
   fclose(ptr);
 
 }
@@ -48,27 +45,5 @@ int main () {
 	void *block;
   read_records(filename);
 
-  // HT_CreateIndex(filename, 'i', "DDA", 4, 10);
-  //
-  // Record record;
-  //
-  // HT_info* header_info = HT_OpenIndex(filename);
-  //
-  // for (int i=0;i<800;i++) {
-  //   if (i%2 == 0) {
-  //     record.id = i;
-  //     strcpy(record.name, "nicholas");
-  //     strcpy(record.surname, "cage");
-  //     strcpy(record.address, "sex");
-  //   } else {
-  //     record.id = i;
-  //     strcpy(record.name, "holas");
-  //     strcpy(record.surname, "cage");
-  //     strcpy(record.address, "ex");
-  //   }
-  //   HT_InsertEntry(*header_info, record);
-  // }
-  //
-  //
-  // HashStatistics(filename);
+  HashStatistics(filename);
 }
