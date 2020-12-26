@@ -18,8 +18,8 @@ int read_records(char* filename) {
 
   char* bugger;
 
-HP_CreateFile(filename, 'i', "DDA", 4, 10);
-  HP_info* header_info = HT_OpenFile(filename);
+HP_CreateFile("hp_file", 'i', "DDA", 4, 10);
+  HP_info* header_info = HT_OpenFile("hp_file");
 
   while (fscanf(ptr, "\n{%s}", buffer) != EOF) {
     bugger = strtok(buffer, ",\"");
