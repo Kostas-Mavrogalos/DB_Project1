@@ -8,7 +8,7 @@
 
 int read_records(char* filename) {
   FILE* ptr;
-  ptr = fopen("records15K.txt", "r");
+  ptr = fopen(filename, "r");
   char buffer[200];
 
   char sad[3] = "\",";
@@ -18,8 +18,8 @@ int read_records(char* filename) {
 
   char* bugger;
 
-HT_CreateIndex(filename, 'i', "DDA", 4, 10);
-  HT_info* header_info = HT_OpenIndex(filename);
+HT_CreateIndex("ht_file", 'i', "DDA", 4, 10);
+  HT_info* header_info = HT_OpenIndex("ht_file");
 
   while (fscanf(ptr, "\n{%s}", buffer) != EOF) {
     bugger = strtok(buffer, ",\"");
@@ -45,5 +45,5 @@ int main () {
 	void *block;
   read_records(filename);
 
-  HashStatistics(filename);
+  HashStatistics("ht_file");
 }
