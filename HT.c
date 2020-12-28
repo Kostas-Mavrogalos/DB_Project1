@@ -22,9 +22,11 @@ int HT_CreateIndex(char* filename, char attrType, char* attrName, int attrLength
 	int bucket_index;
 	int next_block;
 	int curr_block;
+	int index = 0;
 	void *block;
 	void *hash_block;
 	void *end_of_block;
+
 	if (attrType != 'i' && attrType != 'c'){
 		printf("Error illegal character");
 		return -1;
@@ -35,7 +37,7 @@ int HT_CreateIndex(char* filename, char attrType, char* attrName, int attrLength
 	  	return -1;
 	}
 
-  	if ( (fileDesc = BF_OpenFile(filename)) < 0 ) {
+  if ( (fileDesc = BF_OpenFile(filename)) < 0 ) {
 		BF_PrintError("Couldn't open file");
 		return -1;
 	}
@@ -64,12 +66,12 @@ int HT_CreateIndex(char* filename, char attrType, char* attrName, int attrLength
 	strcpy(block, attrName);
 	block += strlen(attrName) + 1;
 
+	//Line intentionally left blank
 	memcpy(block, &attrLength, sizeof(int));
 	block += sizeof(int);
-													//Line intentionally left blank
 	memcpy(block, &numBuckets, sizeof(long int));
 
-	// Use block #1 and beyond to store the indices of the buckets.
+	// Use block #1 and beyond to store the indexes of the buckets.
  	if (BF_AllocateBlock(fileDesc) < 0 ) {
 		BF_PrintError("Couldn't allocate block");
 		return -1;
@@ -78,65 +80,83 @@ int HT_CreateIndex(char* filename, char attrType, char* attrName, int attrLength
 	next_block = 1;
 	memcpy(end_of_block, &next_block, sizeof(int));
 
+	if (BF_WriteBlock(fileDesc, 0) < 0){
+		BF_PrintError("Couldnt' write block");
+		return -1;
+	}
+
  	if (BF_ReadBlock(fileDesc, 1, &block) < 0 ) {
 		BF_PrintError("Couldn't read block");
 		return -1;
 	}
 
 
-	if (BF_WriteBlock(fileDesc, 0) < 0){
-		BF_PrintError("Couldnt' write block");
-		return -1;
-	}
-
-	curr_block = 1;			// curr_block holds the pointer of the block where bucket indices are stored.
+	curr_block = 1;																																// curr_block holds the pointer of the block where bucket indexes are stored.
 	hash_block = block;
 	end_of_block = block;
 	end_of_block += BLOCK_SIZE - sizeof(int);
  	// From block #1 up to block #numBuckets, create the first block of each bucket
   	for (int i=0; i < numBuckets; i++) {
 
-
 		// if curr_block has no more space for indices, allocate a new block and use the last 4 bytes of curr_block to store the pointer
-		if ( end_of_block - hash_block < sizeof(int)) {
+			if ( end_of_block - hash_block <= sizeof(int)) {
 
-			if (BF_AllocateBlock(fileDesc) < 0 ) {
+				if (BF_AllocateBlock(fileDesc) < 0 ) {
   				BF_PrintError("Couldn't allocate block");
   				return -1;
   			}
 
-			bucket_index = BF_GetBlockCounter(fileDesc) - 1;
-   			if (BF_ReadBlock(fileDesc, bucket_index, &block) < 0 ) {
+				bucket_index = BF_GetBlockCounter(fileDesc) - 1;
+
+				if (BF_ReadBlock(fileDesc, bucket_index, &block) < 0 ) {
   				BF_PrintError("Couldn't read block");
   				return -1;
-  			}
+				}
 
-			hash_block = block;
-			memcpy((int*)end_of_block, &bucket_index, sizeof(int));
-			if (BF_WriteBlock(fileDesc, curr_block) < 0){
+				hash_block = block;
+				memcpy((int*)end_of_block, &bucket_index, sizeof(int));
+
+				if (BF_WriteBlock(fileDesc, curr_block) < 0){
   				BF_PrintError("Couldnt' write block");
   				return -1;
   			}
-			curr_block = bucket_index;
 
-			end_of_block = block;
-			end_of_block += BLOCK_SIZE - sizeof(int);
-		}
+				curr_block = bucket_index;
 
-		// create bucket and store index of its corresponding block
-    		if (BF_AllocateBlock(fileDesc) < 0 ) {
+				end_of_block = block;
+				end_of_block += BLOCK_SIZE - sizeof(int);
+
+				index = 0;
+			}
+
+			//Create bucket and store index of its corresponding block
+    	if (BF_AllocateBlock(fileDesc) < 0 ) {
   			BF_PrintError("Couldn't allocate block");
   			return -1;
   		}
 
-		bucket_index = BF_GetBlockCounter(fileDesc)-1;
+			if (BF_ReadBlock(fileDesc, curr_block, &hash_block) < 0 ) {
+				BF_PrintError("Couldn't read block");
+				return -1;
+			}
+			end_of_block = hash_block;
+			end_of_block +=BLOCK_SIZE-sizeof(int);
+			hash_block+=sizeof(int)*index;
 
-		memcpy((int*)hash_block, &bucket_index ,sizeof(int));
-		hash_block += sizeof(int);
+			bucket_index = BF_GetBlockCounter(fileDesc)-1;
+			memcpy((int*)hash_block, &bucket_index ,sizeof(int));
+			index++;
+			hash_block +=sizeof(int);
+
+			if (BF_WriteBlock(fileDesc, curr_block) < 0){
+				BF_PrintError("Couldnt' write block");
+				return -1;
+			}
 
   	}
 
 	return 0;
+
 }
 
 HT_info* HT_OpenIndex(char* filename) {
@@ -148,7 +168,6 @@ HT_info* HT_OpenIndex(char* filename) {
 	  return NULL;
 	}
 
-	// Read the first block where we stored the vital data
 	if (BF_ReadBlock(fileDesc, 0, &block) < 0 ) {
 		BF_PrintError("Couldn't read file");
 		return NULL;
@@ -206,7 +225,8 @@ int HT_InsertEntry(HT_info header_info, Record record) {
 
 	next_block_p = block;
 	next_block_p += BLOCK_SIZE - sizeof(int);
-	memcpy(&block_number, (int*)next_block_p, sizeof(int));
+	// memcpy(&block_number, (int*)next_block_p, sizeof(int));
+	memcpy(&block_number, next_block_p, sizeof(int));
 
 	// Read block #1 where the bucket indexes start
 	if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0 ) {
@@ -215,29 +235,35 @@ int HT_InsertEntry(HT_info header_info, Record record) {
 	}
 
 	bucket_index = bucket;
+
+	//If the index the Hash Function returned so big that the number wouldn't fit in the first index block, reduce it by 127
+	//Inside an index block of 512 bytes, 4 are the pointer to the next block. The other 508 are where the indexes are stored and
+	//since sizeof(int) is 4 bytes, 508/4=127 integers can fit.
 	while(bucket_index >= (BLOCK_SIZE - sizeof(int))/4)
 	{
 		bucket_index -= (BLOCK_SIZE - sizeof(int))/4;
-		memcpy(&block_number, (int*)next_block_p, sizeof(int));
+		// memcpy(&block_number, (int*)next_block_p, sizeof(int));
+		memcpy(&block_number, next_block_p, sizeof(int));
 
 		if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){
 			BF_PrintError("Couldn't read block");
 			return -1;
 		}
+
 		next_block_p = block;
 		next_block_p += BLOCK_SIZE - sizeof(int);
 	}
 
 	next_block_p = block;
 	next_block_p += bucket_index*sizeof(int);
-	memcpy(&block_number, (int*)next_block_p, sizeof(int));
+	// memcpy(&block_number, (int*)next_block_p, sizeof(int));
+	memcpy(&block_number, next_block_p, sizeof(int));
 
 	// read the first block of the bucket where the new entry belongs
 	if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){
 		BF_PrintError("Couldn't read block");
 		return -1;
 	}
-
 
 	next_block_p = block;
 	next_block_p += BLOCK_SIZE - 2*sizeof(int);
@@ -249,7 +275,7 @@ int HT_InsertEntry(HT_info header_info, Record record) {
 	// the following condition checks whether the block is already full
 	while (num_of_records ==  (BLOCK_SIZE - 2*sizeof(int))/sizeof(Record))
 	{
-		if (memcmp(next_block_p, (char[sizeof(int)]){0}, sizeof(int) ) == 0){
+		if (memcmp(next_block_p, (char[sizeof(int)]){0}, sizeof(int) ) == 0) {
 
 			if (BF_AllocateBlock(header_info.fileDesc) < 0 ) {
 				BF_PrintError("Couldn't allocate block");
@@ -265,15 +291,17 @@ int HT_InsertEntry(HT_info header_info, Record record) {
 			memcpy((int*)next_block_p, &block_number, sizeof(int));
 
 			if (BF_WriteBlock(header_info.fileDesc, prev_block) < 0){
-				BF_PrintError("Couldn't read block");
+				BF_PrintError("Couldn't write block");
 				return -1;
 			}
 		}
 		memcpy(&block_number, next_block_p, sizeof(int));
+
 		if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0){
 			BF_PrintError("Couldn't read block");
 			return -1;
 		}
+
 		next_block_p = block;
 		next_block_p += BLOCK_SIZE - 2*sizeof(int);
 		num_records_p = block;
@@ -289,8 +317,10 @@ int HT_InsertEntry(HT_info header_info, Record record) {
 
 	}
 
+	//Store the record inside the block
 	memcpy((Record*)first_available, &record, sizeof(Record));
 
+	//"Pull" the # of records inside the block and incerent it
 	memcpy(&num_of_records, num_records_p, sizeof(int));
 	num_of_records++;
 	memcpy(num_records_p, &num_of_records, sizeof(int));
@@ -311,12 +341,12 @@ int HT_DeleteEntry(HT_info header_info, void* value) {
 	void* block;
 	void* next_block_p;
 	int key_size = header_info.attrLength;
-	void* record;							//To clear the Record that is to be deleted
+	void* record;																																	//a Record that will be empty, to delete the record we need to
 	Record read;
 
 	bucket = hashFunction(header_info.numBuckets, value);
 
-	// Read the block where the bucket starts
+	// Read the header block
 	if (BF_ReadBlock(header_info.fileDesc, 0, &block) < 0 ) {
 		BF_PrintError("Couldn't read file");
 		return -1;
@@ -360,7 +390,7 @@ int HT_DeleteEntry(HT_info header_info, void* value) {
 	next_block_p = block;
 	next_block_p += BLOCK_SIZE - 2*sizeof(int);
 
-	//record now points to the first (key) # of bytes of the block, where the primary key value of the Record struct is stored
+	//record now points to the first sizeof(Record) # of bytes of the block, where record will be searched
 	record = block;
 	memcpy(&read, (Record*)record, sizeof(Record));
 
@@ -368,7 +398,7 @@ int HT_DeleteEntry(HT_info header_info, void* value) {
 		if (memcmp(&(read.id), (int*)value, key_size) == 0){
 			//Empty the value and fill it with 0's
 			memset(record, 0, sizeof(Record));
-			memcpy(&read, (Record*)record, sizeof(Record));\
+			memcpy(&read, (Record*)record, sizeof(Record));
 
 			if (BF_WriteBlock(header_info.fileDesc, block_number) < 0 ) {
 				BF_PrintError("Couldn't write block");
@@ -376,8 +406,8 @@ int HT_DeleteEntry(HT_info header_info, void* value) {
 			}
 			return 0;
 		}
-		if (next_block_p - (void*)record < sizeof(Record)) {				//For when the available space in the block isn't enough for a Record to fit
-			if (memcmp(next_block_p, (char[sizeof(int)]){0}, sizeof(int))==0) {	//If there isn't a next block
+		if (next_block_p - (void*)record < sizeof(Record)) {												//For when the available space in the block isn't enough for a Record to fit
+			if (memcmp(next_block_p, (char[sizeof(int)]){0}, sizeof(int))==0) {				//If there isn't a next block
 				return -1;
 			}
 			memcpy(&block_number, next_block_p, sizeof(int));
@@ -387,6 +417,7 @@ int HT_DeleteEntry(HT_info header_info, void* value) {
 			}
 			record = block;
 			memcpy(&read, (Record*)record, sizeof(Record));
+			//Line intentionally left blank
 
 			next_block_p = (int*)block;
 			next_block_p += BLOCK_SIZE - 2*sizeof(int);
@@ -415,8 +446,7 @@ int HT_GetAllEntries(HT_info header_info, void* value) {
 	void* read;
 	Record record;
 
-														//Line intentionally left blank
-	// Read the block where the bucket starts
+	// Read the header block
 	if (BF_ReadBlock(header_info.fileDesc, 0, &block) < 0 ) {
 		BF_PrintError("Couldn't read file");
 		return -1;
@@ -441,6 +471,7 @@ int HT_GetAllEntries(HT_info header_info, void* value) {
 		hash_block = block;
 		for (int i=0;  i<header_info.numBuckets; i++) {
 			memcpy(&block_number, (int*)hash_block, sizeof(int));
+
 			if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0 ) {
 				BF_PrintError("Couldn't read file for bucket index 1");
 				return -1;
@@ -488,21 +519,25 @@ int HT_GetAllEntries(HT_info header_info, void* value) {
 			}
 
 			index++;
+
 			if (BF_ReadBlock(header_info.fileDesc, curr_block, &block) < 0) {
 				BF_PrintError("Couldn't read block for bucket index 2");
 				return -1;
 			}
+
 			hash_block = block;
 			hash_block += index*sizeof(int);
 			end_of_block = block;
 			end_of_block += BLOCK_SIZE - sizeof(int);
 
-			if (end_of_block - hash_block < sizeof(int)) {
+			if (end_of_block - hash_block <= sizeof(int)) {
 				memcpy(&block_number, end_of_block, sizeof(int));
+
 				if (BF_ReadBlock(header_info.fileDesc, block_number, &block) < 0) {
 					BF_PrintError("Couldn't read block for bucket index 2");
 					return -1;
 				}
+
 				curr_block = block_number;
 				hash_block = block;
 				end_of_block = block;
@@ -513,10 +548,9 @@ int HT_GetAllEntries(HT_info header_info, void* value) {
 		return num_of_blocks;
 	}
 
-bucket = hashFunction(header_info.numBuckets, value);
-bucket_index = bucket;
+	bucket = hashFunction(header_info.numBuckets, value);
+	bucket_index = bucket;
 
-	//Print one value, the one with id == value
 	while(bucket_index >= (BLOCK_SIZE - sizeof(int))/4)
 	{
 		bucket_index -= (BLOCK_SIZE - sizeof(int))/4;
@@ -547,6 +581,7 @@ bucket_index = bucket;
 	read = block;
 	memcpy(&record, read, sizeof(Record));
 
+	//Print one value, the one with id == value
 	while (1) {
 		if (memcmp(&record, (char[sizeof(Record)]){0}, sizeof(Record)) != 0 && memcmp(&(record.id), value, key_size) == 0) {
 			//Print all the info of record with queried id
@@ -621,14 +656,18 @@ int HashStatistics(char* filename) {
 	printf("This file has %d blocks inside\n", BF_GetBlockCounter(header_info->fileDesc));
 	int overflow_blocks;
 
+	//For each bucket
 	for (int i = 0; i<header_info->numBuckets; i++) {
 		overflow_blocks = 0;
 		local_sum = 0;
 		memcpy(&block_number, (int*)hash_block, sizeof(int));
+
 		if (BF_ReadBlock(header_info->fileDesc, block_number, &block) < 0 ) {
 			BF_PrintError("Couldn't read file for bucket index 1");
 			return -1;
 		}
+
+		//"Pull" the needed variables and add the local_sum, where the local # of records is stored
 		num_records_p = block;
 		num_records_p += BLOCK_SIZE - sizeof(int);
 		memcpy(&record_count, num_records_p, sizeof(int));
@@ -641,13 +680,16 @@ int HashStatistics(char* filename) {
 			memcpy(&record_count, num_records_p, sizeof(int));
 			local_sum += record_count;
 			memcpy(&block_number, next_block_p, sizeof(int));
+
 			if (BF_ReadBlock(header_info->fileDesc, block_number, &block) < 0 ) {
 				BF_PrintError("Couldn't read file for bucket index 1");
 				return -1;
 			}
+
 			next_block_p = block;
 			next_block_p += BLOCK_SIZE - 2*sizeof(int);
 
+			//Line intentionally left blank
 			overflow_blocks++;
 		}
 
@@ -659,6 +701,7 @@ int HashStatistics(char* filename) {
 		if (local_sum > max) max = local_sum;
 		total_sum += local_sum;
 		index++;
+
 		if (BF_ReadBlock(header_info->fileDesc, curr_block, &block) < 0) {
 			BF_PrintError("Couldn't read block for bucket index 2");
 			return -1;
@@ -668,9 +711,6 @@ int HashStatistics(char* filename) {
 		hash_block += index*sizeof(int);
 		end_of_block = block;
 		end_of_block += BLOCK_SIZE - sizeof(int);
-
-
-								//Line intentionally left blank
 
 		if (end_of_block - hash_block < sizeof(int)) {
 			memcpy(&block_number, end_of_block, sizeof(int));

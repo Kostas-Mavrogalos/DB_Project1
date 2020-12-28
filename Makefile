@@ -15,4 +15,3 @@ HT:
 
 clear:
 	rm $(EXECS)
-	rm *.swp
